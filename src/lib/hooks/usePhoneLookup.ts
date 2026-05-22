@@ -2,8 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/lib/api/client';
 
 export interface PhoneDetails {
-  phoneNumber: string;
-  name?: string;
+  e164: string;
+  displayName?: string;
+  avatarUrl?: string;
   spamScore: number;
   tags: {
     id: string;

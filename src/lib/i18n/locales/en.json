@@ -6,7 +6,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "search": "Search",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "unknownCaller": "Unknown Caller"
   },
   "auth": {
     "welcome": "Welcome to Meen Dah",
@@ -28,6 +29,17 @@
     "language": "Language",
     "theme": "Theme"
   },
+  "phone": {
+    "securityAnalysis": "SECURITY ANALYSIS",
+    "communityTags": "Community Tags",
+    "addTag": "Add Tag",
+    "noTags": "No tags yet. Be the first to tag this number!",
+    "blockReport": "Block & Report",
+    "call": "Call",
+    "sms": "SMS",
+    "votes": "community votes",
+    "spamReports": "Spam reports"
+  },
   "home": {
     "dashboard": "Dashboard",
     "welcomeBack": "Welcome back",
@@ -35,7 +47,7 @@
   },
   "tabs": {
     "home": "Home",
-    "explore": "Explore",
+    "explore": "Search",
     "profile": "Profile"
   },
   "explore": {

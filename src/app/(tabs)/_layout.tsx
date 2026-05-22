@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/hooks/use-theme';
 
-export default function AppTabs() {
+export default function TabLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
 

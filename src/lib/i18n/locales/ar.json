@@ -6,7 +6,8 @@
     "save": "حفظ",
     "cancel": "إلغاء",
     "search": "بحث",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "unknownCaller": "متصل مجهول"
   },
   "auth": {
     "welcome": "مرحباً بك في مين ده",
@@ -28,6 +29,17 @@
     "language": "اللغة",
     "theme": "المظهر"
   },
+  "phone": {
+    "securityAnalysis": "التحليل الأمني",
+    "communityTags": "وسوم المجتمع",
+    "addTag": "إضافة وسم",
+    "noTags": "لا توجد وسوم بعد. كن أول من يضيف وسماً لهذا الرقم!",
+    "blockReport": "حظر وإبلاغ",
+    "call": "اتصال",
+    "sms": "رسالة",
+    "votes": "أصوات المجتمع",
+    "spamReports": "بلاغات الإزعاج"
+  },
   "home": {
     "dashboard": "لوحة التحكم",
     "welcomeBack": "مرحباً بعودتك",
@@ -35,7 +47,7 @@
   },
   "tabs": {
     "home": "الرئيسية",
-    "explore": "استكشف",
+    "explore": "بحث",
     "profile": "حسابي"
   },
   "explore": {

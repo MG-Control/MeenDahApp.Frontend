@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import apiClient from '@/lib/api/client';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
@@ -19,8 +20,10 @@ function WelcomeScreen() {
   const { setTokens, setUser } = useAuthStore();
 
   useEffect(() => {
+    const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    console.log('[Auth] Configuring Google Sign-In with WebClientId:', webClientId);
     GoogleSignin.configure({
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      webClientId,
       offlineAccess: true,
     });
   }, []);
@@ -32,19 +35,34 @@ function WelcomeScreen() {
       const userInfo = await GoogleSignin.signIn();
       
       if (userInfo.type === 'success') {
-        const googleUser = {
-          id: userInfo.data.user.id,
-          email: userInfo.data.user.email,
-          displayName: userInfo.data.user.name,
-          photoURL: userInfo.data.user.photo,
-        };
+        const idToken = userInfo.data?.idToken;
+        const googleUser = userInfo.data?.user;
+
+        if (!idToken || !googleUser) throw new Error('No user data found');
+
+        try {
+          // Attempt to sync with backend
+          console.log('[Auth] Syncing with backend...');
+          const { data } = await apiClient.post('/auth/google', { idToken });
+          
+          setTokens(data.accessToken, data.refreshToken);
+          setUser(data.user);
+          console.log('Backend login successful:', data.user.displayName);
+        } catch (apiError) {
+          console.warn('[Auth] Backend sync failed, falling back to client-side flow:', apiError);
+          
+          // Fallback: Use Google data directly (Client-side flow)
+          setUser({
+            id: googleUser.id,
+            email: googleUser.email,
+            displayName: googleUser.name || '',
+            photoURL: googleUser.photo || undefined,
+          });
+          // Set dummy tokens to bypass auth checks if necessary
+          setTokens('client-side-token', 'client-side-refresh-token');
+          console.log('Client-side login successful:', googleUser.name);
+        }
         
-        // حفظ البيانات محلياً كما في المشروع الأصلي
-        // نضع توكن وهمي ليعرف التطبيق أننا سجلنا الدخول بنجاح
-        setTokens('local-session', 'local-session');
-        setUser(googleUser);
-        
-        console.log('Login successful:', googleUser.displayName);
         router.replace('/');
       }
     } catch (error: any) {
