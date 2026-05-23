@@ -2,6 +2,7 @@
   "common": {
     "appName": "Meen Dah",
     "loading": "Loading...",
+    "success": "Success",
     "error": "Something went wrong",
     "save": "Save",
     "cancel": "Cancel",

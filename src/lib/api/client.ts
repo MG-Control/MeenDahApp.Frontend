@@ -4,6 +4,7 @@ import axios from 'axios';
 const baseURL = (process.env.EXPO_PUBLIC_API_URL || 'https://meendah.mg-control.com').replace(/\/+$/, '');
 const apiClient = axios.create({
   baseURL,
+  timeout: 60000, // 30 seconds timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,15 +24,15 @@ apiClient.interceptors.request.use(
         ? config.url 
         : `${config.baseURL || ''}${config.url || ''}`.replace(/([^:]\/)\/+/g, "$1");
       
-      console.log(`[API Request] ${config.method?.toUpperCase()} ${fullUrl}`);
-      if (config.data) console.log('[API Data]', config.data);
+      console.log(`🚀 [API Request] ${config.method?.toUpperCase()} ${fullUrl}`);
+      if (config.data) console.log('📦 [API Data]', JSON.stringify(config.data, null, 2));
     }
 
     return config;
   },
   (error) => {
     if (__DEV__) {
-      console.error('[API Request Error]', error);
+      console.error('❌ [API Request Error]', error);
     }
     return Promise.reject(error);
   }
@@ -42,7 +43,7 @@ apiClient.interceptors.response.use(
   (response) => {
     // General Log for Successful Response
     if (__DEV__) {
-      console.log(`[API Response Success] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      console.log(`✅ [API Response Success] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
         status: response.status,
         data: response.data,
       });
@@ -52,7 +53,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     // General Log for Detailed Error
     if (__DEV__) {
-      console.error('[API Response Error]', {
+      console.error('🛑 [API Response Error]', {
         url: error.config?.url,
         method: error.config?.method?.toUpperCase(),
         status: error.response?.status,

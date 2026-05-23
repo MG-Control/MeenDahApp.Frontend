@@ -2,6 +2,7 @@
   "common": {
     "appName": "مين ده",
     "loading": "جاري التحميل...",
+    "success": "نجاح",
     "error": "حدث خطأ ما",
     "save": "حفظ",
     "cancel": "إلغاء",

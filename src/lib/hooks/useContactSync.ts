@@ -16,6 +16,12 @@ export const useContactSync = () => {
     },
     onSuccess: () => {
       setHasSyncedContacts(true);
+      Alert.alert(t('common.success', 'Success'), t('contacts.syncSuccess', 'Contacts synced successfully!'));
+    },
+    onError: (error: any) => {
+      console.error('[ContactSync] Mutation Error:', error);
+      const errorMsg = error.response?.data?.message || error.message || t('common.error');
+      Alert.alert(t('common.error'), errorMsg);
     },
   });
 
