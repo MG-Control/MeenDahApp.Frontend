@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +22,7 @@ export default function SearchScreen() {
 
   const handleSearch = async (text: string) => {
     setQuery(text);
-    if (text.length < 3) {
+    if (text.length < 10) {
       setResults([]);
       return;
     }
@@ -41,6 +41,7 @@ export default function SearchScreen() {
     <TouchableOpacity 
       style={[styles.resultCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
       onPress={() => {
+        console.log('[Search] Navigating to phone:', item.e164);
         router.push(`/phone/${item.e164}` as any);
       }}
     >

@@ -5,8 +5,8 @@ export const useTags = (phoneNumber: string) => {
   const queryClient = useQueryClient();
 
   const addTagMutation = useMutation({
-    mutationFn: async (tagId: number) => {
-      const { data } = await apiClient.post(`/phones/${phoneNumber}/tags`, { tagId });
+    mutationFn: async ({ category, text }: { category: number; text: string }) => {
+      const { data } = await apiClient.post(`/phones/${phoneNumber}/tags`, { category, text });
       return data;
     },
     onSuccess: () => {

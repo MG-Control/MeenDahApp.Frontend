@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
   const systemColorScheme = useColorScheme();
   const { theme } = useSettingsStore();
-  const { accessToken } = useAuthStore();
+  const { accessToken, setTokens, setUser } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
