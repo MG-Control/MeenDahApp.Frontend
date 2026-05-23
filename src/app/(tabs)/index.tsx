@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Platform } from 'react-native';
+import { ScrollView, StyleSheet, Platform, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +10,6 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useContactSync } from '@/lib/hooks/useContactSync';
-import { TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function HomeScreen() {

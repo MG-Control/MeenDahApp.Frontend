@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-function WelcomeScreen() {
+export default function WelcomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -144,8 +144,6 @@ function WelcomeScreen() {
     </SafeAreaView>
   );
 }
-
-export default WelcomeScreen;
 
 const styles = StyleSheet.create({
   safeArea: {

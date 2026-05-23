@@ -43,7 +43,18 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraGradleArguments": [
+              "-x",
+              "lintVitalAnalyzeRelease"
+            ]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

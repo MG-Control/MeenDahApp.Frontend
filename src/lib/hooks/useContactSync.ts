@@ -21,6 +21,10 @@ export const useContactSync = () => {
 
   const requestAndSync = async () => {
     try {
+      if (!Contacts.requestPermissionsAsync) {
+        throw new Error('Contacts module not found. Please rebuild your development client.');
+      }
+
       const { status } = await Contacts.requestPermissionsAsync();
       
       if (status === 'granted') {
