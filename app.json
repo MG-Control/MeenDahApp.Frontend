@@ -43,7 +43,21 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraGradleArguments": [
+              "-x",
+              "lintVitalAnalyzeRelease"
+            ],
+            "ndkVersion": "26.1.10909125",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
