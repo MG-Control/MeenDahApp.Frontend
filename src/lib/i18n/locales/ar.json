@@ -1,0 +1,75 @@
+{
+  "common": {
+    "appName": "مين ده",
+    "loading": "جاري التحميل...",
+    "error": "حدث خطأ ما",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "search": "بحث",
+    "logout": "تسجيل الخروج",
+    "unknownCaller": "متصل مجهول"
+  },
+  "auth": {
+    "welcome": "مرحباً بك في مين ده",
+    "phoneLabel": "رقم الهاتف",
+    "sendOtp": "إرسال رمز التحقق",
+    "verify": "تحقق",
+    "googleSignIn": "تسجيل الدخول بواسطة جوجل",
+    "tagline": "حدد المكالمات المجهولة وامنع الإزعاج بقوة المجتمع.",
+    "featureCallerId": "تحديد هوية المتصل في الوقت الفعلي",
+    "featureSpamBlock": "حظر المكالمات المزعجة تلقائياً"
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "edit": "تعديل الملف الشخصي",
+    "accountSettings": "إعدادات الحساب",
+    "anonymousMode": "وضع مجهول الهوية",
+    "anonymousDesc": "إخفاء هويتك عند إضافة الوسوم",
+    "appPreferences": "تفضيلات التطبيق",
+    "language": "اللغة",
+    "theme": "المظهر"
+  },
+  "phone": {
+    "securityAnalysis": "التحليل الأمني",
+    "communityTags": "وسوم المجتمع",
+    "addTag": "إضافة وسم",
+    "selectTag": "اختر وسماً",
+    "noTags": "لا توجد وسوم بعد. كن أول من يضيف وسماً لهذا الرقم!",
+    "blockReport": "حظر وإبلاغ",
+    "call": "اتصال",
+    "sms": "رسالة",
+    "votes": "أصوات المجتمع",
+    "spamReports": "بلاغات الإزعاج"
+  },
+  "home": {
+    "dashboard": "لوحة التحكم",
+    "welcomeBack": "مرحباً بعودتك",
+    "dashboardDesc": "مرحباً بك في لوحة تحكم تحديد هوية المتصل الخاصة بك."
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "explore": "بحث",
+    "profile": "حسابي"
+  },
+  "explore": {
+    "title": "استكشف",
+    "description": "يتضمن هذا التطبيق نموذجاً لمساعدتك على البدء.",
+    "docs": "وثائق Expo",
+    "learnMore": "تعلم المزيد",
+    "routingTitle": "التوجيه القائم على الملفات",
+    "routingDesc": "يحتوي هذا التطبيق على شاشتين: src/app/index.tsx و src/app/explore.tsx",
+    "layoutDesc": "ملف التنسيق في src/app/_layout.tsx يقوم بإعداد شريط التبويب.",
+    "platformSupportTitle": "دعم Android و iOS والويب",
+    "platformSupportDesc": "يمكنك فتح هذا المشروع على Android و iOS والويب. لفتح نسخة الويب، اضغط w في الجهاز الطرفي.",
+    "imagesTitle": "الصور",
+    "imagesDesc": "للصور الثابتة، يمكنك استخدام اللاحقات @2x و @3x لتوفير ملفات لكثافات شاشة مختلفة."
+  },
+  "contacts": {
+    "syncTitle": "ساعد المجتمع",
+    "syncDesc": "مزامنة جهات اتصالك تساعدنا في تحديد هوية المتصلين المجهولين للجميع. نحن نحترم خصوصيتك ولا نشارك بياناتك.",
+    "syncButton": "مزامنة الآن",
+    "permissionDenied": "تم رفض الإذن",
+    "permissionReason": "نحتاج الوصول لجهات الاتصال لتحديد هوية المتصلين المجهولين.",
+    "syncSuccess": "تمت المزامنة بنجاح!"
+  }
+}

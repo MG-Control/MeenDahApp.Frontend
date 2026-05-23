@@ -28,6 +28,12 @@
       "expo-router",
       "@react-native-google-signin/google-signin",
       [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Meen Dah to access your contacts to help identify unknown callers and build our community database."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
