@@ -40,7 +40,20 @@
     "call": "اتصال",
     "sms": "رسالة",
     "votes": "أصوات المجتمع",
-    "spamReports": "بلاغات الإزعاج"
+    "vote": "صوت",
+    "votes_plural": "أصوات",
+    "spamReports": "بلاغات الإزعاج",
+    "totalSearches": "مرات البحث",
+    "lastActivity": "آخر نشاط",
+    "shareMessage": "اطلع على هذا الرقم في مين ده: {{number}} — {{name}}",
+    "callNotSupported": "الاتصال غير مدعوم على هذا الجهاز",
+    "smsNotSupported": "الرسائل غير مدعومة على هذا الجهاز",
+    "loadError": "تعذر تحميل تفاصيل الرقم",
+    "retry": "إعادة المحاولة",
+    "tagAdded": "تمت إضافة الوسم بنجاح",
+    "duplicateTag": "لقد أضفت هذا الوسم مسبقاً",
+    "cannotVoteOwnTag": "لا يمكنك التصويت على وسمك الخاص",
+    "allTagsAdded": "لقد أضفت جميع الوسوم المتاحة لهذا الرقم"
   },
   "home": {
     "dashboard": "لوحة التحكم",
@@ -63,7 +76,9 @@
     "platformSupportTitle": "دعم Android و iOS والويب",
     "platformSupportDesc": "يمكنك فتح هذا المشروع على Android و iOS والويب. لفتح نسخة الويب، اضغط w في الجهاز الطرفي.",
     "imagesTitle": "الصور",
-    "imagesDesc": "للصور الثابتة، يمكنك استخدام اللاحقات @2x و @3x لتوفير ملفات لكثافات شاشة مختلفة."
+    "imagesDesc": "للصور الثابتة، يمكنك استخدام اللاحقات @2x و @3x لتوفير ملفات لكثافات شاشة مختلفة.",
+    "minDigitsHint": "أدخل 10 أرقام على الأقل للبحث",
+    "noResults": "لا توجد نتائج لـ \"{{query}}\""
   },
   "contacts": {
     "syncTitle": "ساعد المجتمع",

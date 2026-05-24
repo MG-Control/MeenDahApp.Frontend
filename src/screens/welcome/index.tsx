@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './styles';
 
 export default function WelcomeScreen() {
-export default function WelcomeScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';

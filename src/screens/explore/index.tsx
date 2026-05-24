@@ -11,6 +11,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useTheme } from '@/hooks/use-theme';
 import apiClient from '@/lib/api/client';
+import { encodePhoneForRoute } from '@/lib/utils/phoneRoute';
 import { styles } from './styles';
 
 export default function SearchScreen() {
@@ -29,7 +30,7 @@ export default function SearchScreen() {
     }
     setLoading(true);
     try {
-      const { data } = await apiClient.get(`/phones/search?q=${text}`);
+      const { data } = await apiClient.get(`/phones/search?q=${encodeURIComponent(text)}`);
       setResults(data);
     } catch (error) {
       console.error('Search error:', error);
@@ -42,7 +43,7 @@ export default function SearchScreen() {
     <TouchableOpacity 
       style={[styles.resultCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
       onPress={() => {
-        router.push(`/phone/${item.e164}` as any);
+        router.push(`/phone/${encodePhoneForRoute(item.e164)}` as any);
       }}
     >
       <Avatar 
@@ -123,10 +124,16 @@ export default function SearchScreen() {
             keyExtractor={(item) => item.e164}
             contentContainerStyle={styles.resultsList}
             ListEmptyComponent={
-              query.length >= 3 ? (
+              query.length > 0 && query.length < 10 ? (
                 <View style={styles.emptyContainer}>
                   <ThemedText themeColor="textSecondary">
-                    No results found for "{query}"
+                    {t('explore.minDigitsHint')}
+                  </ThemedText>
+                </View>
+              ) : query.length >= 10 ? (
+                <View style={styles.emptyContainer}>
+                  <ThemedText themeColor="textSecondary">
+                    {t('explore.noResults', { query })}
                   </ThemedText>
                 </View>
               ) : null

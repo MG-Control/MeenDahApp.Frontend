@@ -1,12 +1,20 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api/client';
+import { encodePhoneForApi } from '@/lib/utils/phoneRoute';
+
+function phoneTagsPath(phoneNumber: string) {
+  return `/phones/${encodePhoneForApi(phoneNumber)}/tags`;
+}
 
 export const useTags = (phoneNumber: string) => {
   const queryClient = useQueryClient();
 
   const addTagMutation = useMutation({
     mutationFn: async ({ category, text }: { category: number; text: string }) => {
-      const { data } = await apiClient.post(`/phones/${phoneNumber}/tags`, { category, text });
+      const { data } = await apiClient.post<number>(phoneTagsPath(phoneNumber), {
+        category,
+        text,
+      });
       return data;
     },
     onSuccess: () => {
@@ -19,14 +27,12 @@ export const useTags = (phoneNumber: string) => {
       tagEntryId,
       voteType,
     }: {
-      tagEntryId: string;
+      tagEntryId: number;
       voteType: number;
     }) => {
       const { data } = await apiClient.post(
-        `/phones/${phoneNumber}/tags/${tagEntryId}/vote`,
-        {
-          voteType,
-        }
+        `${phoneTagsPath(phoneNumber)}/${tagEntryId}/vote`,
+        { voteType }
       );
       return data;
     },
@@ -37,6 +43,7 @@ export const useTags = (phoneNumber: string) => {
 
   return {
     addTag: addTagMutation.mutate,
+    addTagAsync: addTagMutation.mutateAsync,
     isAddingTag: addTagMutation.isPending,
     voteTag: voteTagMutation.mutate,
     isVoting: voteTagMutation.isPending,

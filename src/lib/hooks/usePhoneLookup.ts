@@ -1,5 +1,15 @@
 import apiClient from '@/lib/api/client';
+import { encodePhoneForApi } from '@/lib/utils/phoneRoute';
 import { useQuery } from '@tanstack/react-query';
+
+export interface TagEntry {
+  id: number;
+  text: string;
+  category: number;
+  upvoteCount: number;
+  downvoteCount: number;
+  createdAt: string;
+}
 
 export interface PhoneDetails {
   e164: string;
@@ -7,14 +17,9 @@ export interface PhoneDetails {
   email?: string;
   avatarUrl?: string;
   spamScore: number;
-  topTags: {
-    id: number;
-    text: string;
-    category: number;
-    upvoteCount: number;
-    downvoteCount: number;
-    createdAt: string;
-  }[];
+  totalSearches: number;
+  lastActivityAt: string;
+  topTags: TagEntry[];
 }
 
 export const usePhoneLookup = (phoneNumber?: string) => {
@@ -22,8 +27,9 @@ export const usePhoneLookup = (phoneNumber?: string) => {
     queryKey: ['phone', phoneNumber],
     queryFn: async () => {
       if (!phoneNumber) return null;
-      const { data } = await apiClient.get<PhoneDetails>(`/phones/${phoneNumber}`);
-      // if (__DEV__) console.log('[API] Phone Details Response:', JSON.stringify(data, null, 2));
+      const { data } = await apiClient.get<PhoneDetails>(
+        `/phones/${encodePhoneForApi(phoneNumber)}`
+      );
       return data;
     },
     enabled: !!phoneNumber,
