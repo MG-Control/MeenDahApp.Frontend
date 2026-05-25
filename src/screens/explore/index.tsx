@@ -24,7 +24,7 @@ export default function SearchScreen() {
 
   const handleSearch = async (text: string) => {
     setQuery(text);
-    if (text.length < 10) {
+    if (text.length < 11) {
       setResults([]);
       return;
     }
@@ -125,13 +125,13 @@ export default function SearchScreen() {
             contentContainerStyle={styles.resultsList}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
-              query.length > 0 && query.length < 10 ? (
+              query.length > 0 && query.length < 11 ? (
                 <View style={styles.emptyContainer}>
                   <ThemedText themeColor="textSecondary">
                     {t('explore.minDigitsHint')}
                   </ThemedText>
                 </View>
-              ) : query.length >= 10 ? (
+              ) : query.length >= 11 ? (
                 <View style={styles.emptyContainer}>
                   <ThemedText themeColor="textSecondary">
                     {t('explore.noResults', { query })}

@@ -144,6 +144,20 @@ export default function PhoneDetailScreen() {
     }
   };
 
+  const handleOpenLink = async (url?: string | null) => {
+    if (!url) return;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(t('common.error'), t('phone.linkNotSupported'));
+      }
+    } catch (error) {
+      console.error('Error opening external link:', error);
+    }
+  };
+
   const submitTag = async (category: number, text: string) => {
     if (!phoneNumber) return;
 
@@ -203,6 +217,38 @@ export default function PhoneDetailScreen() {
     const tagInfo = getTagById(tagEntry.category);
     return tagInfo?.color || '#6b7280';
   };
+
+  const profileSections = [
+    {
+      title: t('phone.personalInfo'),
+      items: [
+        { label: t('phone.userId'), value: displayData?.userId },
+        { label: t('phone.gender'), value: displayData?.gender },
+        { label: t('phone.birthdate'), value: displayData?.birthdate },
+        { label: t('phone.joined'), value: displayData?.joined },
+      ],
+    },
+    {
+      title: t('phone.locationInfo'),
+      items: [
+        { label: t('phone.country'), value: displayData?.country },
+        { label: t('phone.residence'), value: displayData?.residence },
+        { label: t('phone.birthplace'), value: displayData?.birthplace },
+      ],
+    },
+    {
+      title: t('phone.workInfo'),
+      items: [
+        { label: t('phone.relationship'), value: displayData?.relationship },
+        { label: t('phone.workplace'), value: displayData?.workplace },
+      ],
+    },
+  ]
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => Boolean(item.value)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   if (!phoneNumber) {
     return (
@@ -294,6 +340,40 @@ export default function PhoneDetailScreen() {
                   <ThemedText style={styles.secondaryActionText}>{t('phone.sms')}</ThemedText>
                 </TouchableOpacity>
               </View>
+
+              {(displayData?.facebookUrl || displayData?.whatsappUrl || displayData?.telegramUrl) && (
+                <View style={styles.socialActionRow}>
+                  {displayData?.facebookUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#1877f2' }]}
+                      onPress={() => handleOpenLink(displayData.facebookUrl)}
+                    >
+                      <Ionicons name="logo-facebook" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.facebook')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {displayData?.whatsappUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#25d366' }]}
+                      onPress={() => handleOpenLink(displayData.whatsappUrl)}
+                    >
+                      <Ionicons name="logo-whatsapp" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.whatsapp')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {displayData?.telegramUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#229ed9' }]}
+                      onPress={() => handleOpenLink(displayData.telegramUrl)}
+                    >
+                      <Ionicons name="paper-plane" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.telegram')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
             </View>
           </SafeAreaView>
         </View>
@@ -327,6 +407,42 @@ export default function PhoneDetailScreen() {
               ) : null}
             </View>
           )}
+
+          {profileSections.length > 0 ? (
+            <View style={styles.profileSections}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.profileSectionsTitle}>
+                {t('phone.profileDetails')}
+              </ThemedText>
+
+              {profileSections.map((section) => (
+                <ThemedView
+                  key={section.title}
+                  type="backgroundElement"
+                  style={[styles.profileSectionCard, { borderColor: theme.backgroundSelected }]}
+                >
+                  <ThemedText type="smallBold" style={styles.profileSectionTitle} themeColor="textSecondary">
+                    {section.title}
+                  </ThemedText>
+
+                  <View style={styles.profileGrid}>
+                    {section.items.map((row) => (
+                      <View
+                        key={row.label}
+                        style={[styles.profileItem, { borderColor: theme.backgroundSelected }]}
+                      >
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {row.label}
+                        </ThemedText>
+                        <ThemedText type="default" style={styles.profileValue} numberOfLines={2}>
+                          {row.value}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                </ThemedView>
+              ))}
+            </View>
+          ) : null}
 
           <ThemedView
             type="backgroundElement"

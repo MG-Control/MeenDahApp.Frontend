@@ -20,13 +20,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './styles';
 
 type AuthMode = 'login' | 'register';
-type AuthMethod = 'password' | 'otp';
 
 const DEFAULT_EMAIL = 'mosaad.ghanem@nicedeer.com';
 const DEFAULT_PHONE = '01205808516';
-const DEFAULT_PASSWORD = DEFAULT_PHONE;
-const DEFAULT_OTP = '123456';
 const DEFAULT_DISPLAY_NAME = 'Mosaad Ghanem';
+const DEFAULT_PASSWORD = '';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -35,23 +33,19 @@ export default function WelcomeScreen() {
   const needsRTLFlip = isArabic !== I18nManager.isRTL;
   const theme = useTheme();
   const [mode, setMode] = useState<AuthMode>('login');
-  const [method, setMethod] = useState<AuthMethod>('password');
   const [loading, setLoading] = useState(false);
   const [displayName, setDisplayName] = useState(DEFAULT_DISPLAY_NAME);
   const [identifier, setIdentifier] = useState(DEFAULT_PHONE);
   const [password, setPassword] = useState(DEFAULT_PASSWORD);
-  const [otpCode, setOtpCode] = useState(DEFAULT_OTP);
   const { setTokens, setUser } = useAuthStore();
 
   const normalizePhoneNumber = (value: string) => value.replace(/[^\d+]/g, '');
 
-  const applyDefaultValues = (nextMode: AuthMode, nextMethod = method) => {
+  const applyDefaultValues = (nextMode: AuthMode) => {
     setMode(nextMode);
-    setMethod(nextMethod);
     setDisplayName(DEFAULT_DISPLAY_NAME);
     setIdentifier(nextMode === 'login' ? DEFAULT_PHONE : DEFAULT_EMAIL);
     setPassword(DEFAULT_PASSWORD);
-    setOtpCode(DEFAULT_OTP);
   };
 
   const normalizeIdentifier = () => {
@@ -92,13 +86,8 @@ export default function WelcomeScreen() {
       return false;
     }
 
-    if (method === 'password' && password.length < 6) {
+    if (password.trim().length < 6) {
       Alert.alert(t('common.error'), t('auth.passwordValidation'));
-      return false;
-    }
-
-    if (method === 'otp' && otpCode.trim().length < 6) {
-      Alert.alert(t('common.error'), t('auth.otpValidation'));
       return false;
     }
 
@@ -112,7 +101,7 @@ export default function WelcomeScreen() {
         ? normalizedIdentifier.split('@')[0] || t('auth.defaultUserName')
         : t('auth.defaultUserName');
 
-  const handlePasswordAuth = async () => {
+  const handleAuth = async () => {
     if (!validateForm()) {
       return;
     }
@@ -134,68 +123,11 @@ export default function WelcomeScreen() {
             }
           : {
               identifier: normalized.normalizedIdentifier,
-              password,
               displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
+              password,
             };
 
       const { data } = await apiClient.post(endpoint, payload);
-
-      setTokens(data.accessToken, data.refreshToken);
-      setUser(data.user);
-      router.replace('/');
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error?.response?.data || error?.message || t('common.error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendOtp = async () => {
-    const normalized = normalizeIdentifier();
-    if (!normalized) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { data } = await apiClient.post('/auth/send-otp', {
-        identifier: normalized.normalizedIdentifier,
-        mode,
-        displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
-        password,
-      });
-
-      if (data?.otpCode) {
-        setOtpCode(data.otpCode);
-      }
-
-      Alert.alert(t('common.success'), t('auth.otpSent'));
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error?.response?.data || error?.message || t('common.error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    const normalized = normalizeIdentifier();
-    if (!normalized) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { data } = await apiClient.post('/auth/verify-otp', {
-        identifier: normalized.normalizedIdentifier,
-        otpCode,
-        mode,
-        displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
-        password,
-      });
 
       setTokens(data.accessToken, data.refreshToken);
       setUser(data.user);
@@ -248,23 +180,6 @@ export default function WelcomeScreen() {
                   >
                     <ThemedText style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
                       {item === 'login' ? t('auth.login') : t('auth.register')}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={[styles.modeSwitcher, { backgroundColor: theme.backgroundElement }]}>
-              {(['password', 'otp'] as AuthMethod[]).map((item) => {
-                const active = method === item;
-                return (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.modeButton, active && { backgroundColor: '#0f766e' }]}
-                    onPress={() => applyDefaultValues(mode, item)}
-                  >
-                    <ThemedText style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
-                      {item === 'password' ? t('auth.passwordMethod') : t('auth.otpMethod')}
                     </ThemedText>
                   </TouchableOpacity>
                 );
@@ -331,82 +246,29 @@ export default function WelcomeScreen() {
                 />
               </View>
 
-              {method === 'otp' ? (
-                <View style={styles.inputGroup}>
-                  <ThemedText type="smallBold">{t('auth.otpLabel')}</ThemedText>
-                  <TextInput
-                    value={otpCode}
-                    onChangeText={setOtpCode}
-                    placeholder={t('auth.otpPlaceholder')}
-                    placeholderTextColor={theme.textSecondary}
-                    keyboardType="number-pad"
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme.background,
-                        color: theme.text,
-                        textAlign: needsRTLFlip ? 'right' : 'left',
-                      },
-                    ]}
-                  />
+              <TouchableOpacity
+                style={[
+                  styles.signInButton,
+                  loading && { opacity: 0.7 },
+                  { backgroundColor: '#3c87f7', flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
+                ]}
+                onPress={handleAuth}
+                disabled={loading}
+              >
+                <View style={styles.iconContainer}>
+                  <Ionicons name={mode === 'login' ? 'log-in-outline' : 'person-add-outline'} size={20} color="#3c87f7" />
                 </View>
-              ) : null}
-
-              {method === 'password' ? (
-                <TouchableOpacity
-                  style={[
-                    styles.signInButton,
-                    loading && { opacity: 0.7 },
-                    { backgroundColor: '#3c87f7', flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
-                  ]}
-                  onPress={handlePasswordAuth}
-                  disabled={loading}
-                >
-                  <View style={styles.iconContainer}>
-                    <Ionicons name={mode === 'login' ? 'log-in-outline' : 'person-add-outline'} size={20} color="#3c87f7" />
-                  </View>
-                  <ThemedText style={styles.signInText}>
-                    {loading
-                      ? t('common.loading')
-                      : mode === 'login'
-                        ? t('auth.loginButton')
-                        : t('auth.registerButton')}
-                  </ThemedText>
-                </TouchableOpacity>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.secondaryButton,
-                      loading && { opacity: 0.7 },
-                      { flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
-                    ]}
-                    onPress={handleSendOtp}
-                    disabled={loading}
-                  >
-                    <Ionicons name="paper-plane-outline" size={18} color="#0f766e" />
-                    <ThemedText style={styles.secondaryButtonText}>{t('auth.sendOtpButton')}</ThemedText>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.signInButton,
-                      loading && { opacity: 0.7 },
-                      { backgroundColor: '#0f766e', flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
-                    ]}
-                    onPress={handleVerifyOtp}
-                    disabled={loading}
-                  >
-                    <View style={styles.iconContainer}>
-                      <Ionicons name="key-outline" size={20} color="#0f766e" />
-                    </View>
-                    <ThemedText style={styles.signInText}>{t('auth.verifyOtpButton')}</ThemedText>
-                  </TouchableOpacity>
-                </>
-              )}
+                <ThemedText style={styles.signInText}>
+                  {loading
+                    ? t('common.loading')
+                    : mode === 'login'
+                      ? t('auth.loginButton')
+                      : t('auth.registerButton')}
+                </ThemedText>
+              </TouchableOpacity>
 
               <ThemedText style={styles.helperText} themeColor="textSecondary">
-                {method === 'password' ? t('auth.passwordHelper') : t('auth.otpHelper')}
+                {t('auth.passwordHelper')}
               </ThemedText>
             </View>
 

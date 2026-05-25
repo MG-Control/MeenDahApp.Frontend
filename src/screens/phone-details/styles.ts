@@ -110,6 +110,28 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  socialActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    marginTop: Spacing.three,
+    justifyContent: 'center',
+  },
+  socialActionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 108,
+    justifyContent: 'center',
+  },
+  socialActionText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 14,
+  },
   content: {
     paddingHorizontal: Spacing.four,
     marginTop: -20,
@@ -149,6 +171,44 @@ export const styles = StyleSheet.create({
       },
       android: { elevation: 2 },
     }),
+  },
+  profileSections: {
+    marginTop: Spacing.four,
+    gap: Spacing.three,
+  },
+  profileSectionsTitle: {
+    marginBottom: -Spacing.one,
+  },
+  profileSectionCard: {
+    padding: Spacing.four,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: Spacing.three,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  profileSectionTitle: {
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+  profileGrid: {
+    gap: Spacing.two,
+  },
+  profileItem: {
+    padding: Spacing.three,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 4,
+  },
+  profileValue: {
+    lineHeight: 20,
   },
   cardHeader: {
     flexDirection: 'row',
