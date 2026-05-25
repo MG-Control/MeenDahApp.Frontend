@@ -305,6 +305,38 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.four,
   },
+  tagInputSection: {
+    gap: Spacing.three,
+    marginBottom: Spacing.four,
+  },
+  tagInput: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 12,
+    fontSize: 16,
+    textAlign: 'right',
+  },
+  tagSubmitButton: {
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagSubmitButtonDisabled: {
+    opacity: 0.5,
+  },
+  tagSubmitButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  suggestionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.two,
+  },
   modalEmpty: {
     paddingVertical: Spacing.six,
     alignItems: 'center',

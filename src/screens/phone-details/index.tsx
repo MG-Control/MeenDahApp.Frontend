@@ -12,6 +12,7 @@ import {
   RefreshControl,
   ScrollView,
   Share,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -21,7 +22,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Avatar } from '@/components/ui/avatar';
 import { LoadingState } from '@/components/ui/loading-state';
-import { TAGS, getTagById } from '@/constants/tags';
+import { TAGS, UNKNOWN_TAG_ID, getTagById, getTagSuggestions } from '@/constants/tags';
 import { useTheme } from '@/hooks/use-theme';
 import { PhoneDetails, usePhoneLookup } from '@/lib/hooks/usePhoneLookup';
 import { useTags } from '@/lib/hooks/useTags';
@@ -70,6 +71,7 @@ export default function PhoneDetailScreen() {
 
   const [localPhone, setLocalPhone] = useState<PhoneDetails | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
+  const [tagInput, setTagInput] = useState('');
   const [votingTagId, setVotingTagId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -84,10 +86,12 @@ export default function PhoneDetailScreen() {
       ? getSpamDetailsAr(displayData?.spamScore || 0)
       : getSpamDetails(displayData?.spamScore || 0);
 
-  const availableTags = useMemo(() => {
-    if (!displayData?.topTags) return TAGS;
-    return TAGS.filter((tag) => !tagAlreadyExists(displayData.topTags, tag.id));
-  }, [displayData?.topTags]);
+  const suggestedTags = useMemo(() => {
+    const query = tagInput.trim();
+    const filteredTags = getTagSuggestions(query);
+    if (!displayData?.topTags) return filteredTags;
+    return filteredTags.filter((tag) => !tagAlreadyExists(displayData.topTags, tag.id));
+  }, [displayData?.topTags, tagInput]);
 
   const backIcon = I18nManager.isRTL ? 'arrow-forward' : 'arrow-back';
 
@@ -103,6 +107,16 @@ export default function PhoneDetailScreen() {
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const openTagModal = () => {
+    setTagInput('');
+    setShowTagModal(true);
+  };
+
+  const closeTagModal = () => {
+    setShowTagModal(false);
+    setTagInput('');
   };
 
   const handleCall = async () => {
@@ -135,16 +149,15 @@ export default function PhoneDetailScreen() {
     }
   };
 
-  const handleAddTag = async (tagId: number) => {
-    const tagInfo = getTagById(tagId);
-    if (!tagInfo || !phoneNumber) return;
+  const submitTag = async (category: number, text: string) => {
+    if (!phoneNumber) return;
 
     try {
       await addTagAsync({
-        category: tagId,
-        text: tagInfo.labelEn,
+        category,
+        text,
       });
-      setShowTagModal(false);
+      closeTagModal();
       await refetch();
     } catch (error: unknown) {
       const axiosError = error as { response?: { status?: number; data?: { message?: string } } };
@@ -154,6 +167,27 @@ export default function PhoneDetailScreen() {
           : axiosError.response?.data?.message || t('common.error');
       Alert.alert(t('common.error'), message);
     }
+  };
+
+  const handleAddSuggestedTag = async (tagId: number) => {
+    const tagInfo = getTagById(tagId);
+    if (!tagInfo) return;
+    await submitTag(tagInfo.id, tagInfo.labelEn);
+  };
+
+  const handleAddTypedTag = async () => {
+    const trimmedText = tagInput.trim();
+    if (!trimmedText) return;
+
+    const normalizedInput = trimmedText.toLowerCase();
+    const matchingTag = TAGS.find(
+      (tag) =>
+        tag.key.toLowerCase() === normalizedInput ||
+        tag.labelEn.toLowerCase() === normalizedInput ||
+        tag.labelAr === trimmedText
+    );
+
+    await submitTag(matchingTag?.id ?? UNKNOWN_TAG_ID, matchingTag?.labelEn ?? trimmedText);
   };
 
   const handleVote = (tagEntryId: number) => {
@@ -204,6 +238,9 @@ export default function PhoneDetailScreen() {
           tag.key.toLowerCase() === tagEntry.text.toLowerCase() ||
           tag.labelEn.toLowerCase() === tagEntry.text.toLowerCase()
       );
+    if (tagInfo?.id === UNKNOWN_TAG_ID && tagEntry.text) {
+      return tagEntry.text;
+    }
     return language === 'ar' ? tagInfo?.labelAr || tagEntry.text : tagInfo?.labelEn || tagEntry.text;
   };
 
@@ -381,8 +418,7 @@ export default function PhoneDetailScreen() {
               </ThemedText>
               <TouchableOpacity
                 style={[styles.addTagButton, { backgroundColor: BRAND_COLOR + '15' }]}
-                onPress={() => setShowTagModal(true)}
-                disabled={availableTags.length === 0}
+                onPress={openTagModal}
               >
                 <Ionicons name="add" size={20} color={BRAND_COLOR} />
                 <ThemedText style={styles.addTagText}>{t('phone.addTag')}</ThemedText>
@@ -466,7 +502,7 @@ export default function PhoneDetailScreen() {
         visible={showTagModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowTagModal(false)}
+        onRequestClose={closeTagModal}
       >
         <View style={styles.modalOverlay}>
           <ThemedView
@@ -475,23 +511,71 @@ export default function PhoneDetailScreen() {
           >
             <View style={styles.modalHeader}>
               <ThemedText type="subtitle">{t('phone.selectTag')}</ThemedText>
-              <TouchableOpacity onPress={() => setShowTagModal(false)} hitSlop={12}>
+              <TouchableOpacity onPress={closeTagModal} hitSlop={12}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
 
-            {availableTags.length === 0 ? (
+            <View style={styles.tagInputSection}>
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {t('phone.selectTag')}
+              </ThemedText>
+              <TextInput
+                value={tagInput}
+                onChangeText={setTagInput}
+                placeholder={t('phone.addTag')}
+                placeholderTextColor={theme.textSecondary}
+                style={[
+                  styles.tagInput,
+                  {
+                    borderColor: theme.backgroundSelected,
+                    color: theme.text,
+                    backgroundColor: theme.background,
+                  },
+                ]}
+                returnKeyType="done"
+                onSubmitEditing={handleAddTypedTag}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.tagSubmitButton,
+                  { backgroundColor: BRAND_COLOR },
+                  (!tagInput.trim() || isAddingTag) && styles.tagSubmitButtonDisabled,
+                ]}
+                onPress={handleAddTypedTag}
+                disabled={!tagInput.trim() || isAddingTag}
+              >
+                {isAddingTag ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <ThemedText style={styles.tagSubmitButtonText}>{t('common.add')}</ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.suggestionsHeader}>
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {t('phone.communityTags')}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {t('phone.selectTag')}
+              </ThemedText>
+            </View>
+
+            {suggestedTags.length === 0 ? (
               <View style={styles.modalEmpty}>
                 <ThemedText themeColor="textSecondary">{t('phone.allTagsAdded')}</ThemedText>
               </View>
             ) : (
               <FlatList
-                data={availableTags}
+                data={suggestedTags}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[styles.tagOption, { borderBottomColor: theme.backgroundSelected }]}
-                    onPress={() => handleAddTag(item.id)}
+                    onPress={() => handleAddSuggestedTag(item.id)}
                     disabled={isAddingTag}
                   >
                     <View style={[styles.tagIcon, { backgroundColor: item.color + '20' }]}>
@@ -508,6 +592,7 @@ export default function PhoneDetailScreen() {
                   </TouchableOpacity>
                 )}
                 contentContainerStyle={styles.modalList}
+                keyboardShouldPersistTaps="handled"
               />
             )}
           </ThemedView>
