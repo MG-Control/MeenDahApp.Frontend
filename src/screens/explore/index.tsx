@@ -123,6 +123,7 @@ export default function SearchScreen() {
             renderItem={renderResultItem}
             keyExtractor={(item) => item.e164}
             contentContainerStyle={styles.resultsList}
+            keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
               query.length > 0 && query.length < 10 ? (
                 <View style={styles.emptyContainer}>

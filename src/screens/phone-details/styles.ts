@@ -41,11 +41,12 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.three,
     textAlign: 'center',
     paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
   },
   numberText: {
     color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 17,
-    marginTop: 4,
+    marginTop: Spacing.two,
     letterSpacing: 0.5,
   },
   emailRow: {

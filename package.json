@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
+    "forward:android": "adb forward tcp:5554 tcp:5555",
     "start": "expo start",
     "android": "expo run:android",
     "android:clean": "cd android && ./gradlew clean && if (Test-Path .cxx) { Remove-Item -Recurse -Force .cxx } && if (Test-Path app/build) { Remove-Item -Recurse -Force app/build } && if (Test-Path build) { Remove-Item -Recurse -Force build }",
@@ -17,18 +18,14 @@
     "lint": "expo lint"
   },
   "dependencies": {
-    "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
     "@react-navigation/native": "^7.1.33",
     "@tanstack/react-query": "^5.100.11",
     "axios": "^1.16.1",
     "expo": "~55.0.25",
-    "expo-auth-session": "~55.0.16",
-    "expo-build-properties": "~55.0.14",
     "expo-build-properties": "~55.0.14",
     "expo-constants": "~55.0.16",
-    "expo-contacts": "~55.0.14",
     "expo-contacts": "~55.0.14",
     "expo-crypto": "~55.0.15",
     "expo-dev-client": "~55.0.35",
