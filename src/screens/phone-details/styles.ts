@@ -228,34 +228,30 @@ export const styles = StyleSheet.create({
   tagItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
   tagTextBlock: {
     flex: 1,
   },
   tagIcon: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  voteButton: {
-    backgroundColor: 'rgba(34, 197, 94, 0.12)',
-    padding: 8,
-    borderRadius: 12,
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  voteButtonDisabled: {
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    opacity: 0.5,
-  },
-  voteButtonActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   emptyTags: {
     padding: Spacing.five,
@@ -264,6 +260,14 @@ export const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  emptyTagsIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   emptyText: {
     textAlign: 'center',

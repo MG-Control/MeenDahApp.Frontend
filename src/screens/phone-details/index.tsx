@@ -34,10 +34,6 @@ import { styles } from './styles';
 
 const BRAND_COLOR = '#3c87f7';
 
-function isValidTagId(id: number): boolean {
-  return Number.isInteger(id) && id > 0;
-}
-
 function tagAlreadyExists(
   topTags: PhoneDetails['topTags'] | undefined,
   tagId: number
@@ -67,12 +63,11 @@ export default function PhoneDetailScreen() {
     refetch,
     isRefetching,
   } = usePhoneLookup(phoneNumber);
-  const { addTagAsync, isAddingTag, voteTag, isVoting } = useTags(phoneNumber || '');
+  const { addTagAsync, isAddingTag } = useTags(phoneNumber || '');
 
   const [localPhone, setLocalPhone] = useState<PhoneDetails | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [tagInput, setTagInput] = useState('');
-  const [votingTagId, setVotingTagId] = useState<number | null>(null);
 
   useEffect(() => {
     if (phone) {
@@ -188,46 +183,6 @@ export default function PhoneDetailScreen() {
     );
 
     await submitTag(matchingTag?.id ?? UNKNOWN_TAG_ID, matchingTag?.labelEn ?? trimmedText);
-  };
-
-  const handleVote = (tagEntryId: number) => {
-    if (!isValidTagId(tagEntryId) || isVoting) return;
-
-    const previousState = localPhone ? { ...localPhone, topTags: [...localPhone.topTags] } : null;
-    if (localPhone) {
-      const updatedTags = localPhone.topTags.map((tag) =>
-        tag.id === tagEntryId ? { ...tag, upvoteCount: tag.upvoteCount + 1 } : tag
-      );
-      setLocalPhone({ ...localPhone, topTags: updatedTags });
-    }
-
-    setVotingTagId(tagEntryId);
-    voteTag(
-      { tagEntryId, voteType: 1 },
-      {
-        onSuccess: () => {
-          refetch();
-        },
-        onError: (error: unknown) => {
-          if (previousState) setLocalPhone(previousState);
-          const axiosError = error as { response?: { data?: { message?: string } } };
-          const serverMessage = axiosError.response?.data?.message;
-          const message =
-            serverMessage?.toLowerCase().includes('own tag')
-              ? t('phone.cannotVoteOwnTag')
-              : serverMessage || t('common.error');
-          Alert.alert(t('common.error'), message);
-        },
-        onSettled: () => {
-          setVotingTagId(null);
-        },
-      }
-    );
-  };
-
-  const formatVoteCount = (count: number) => {
-    const key = count === 1 ? 'phone.vote' : 'phone.votes_plural';
-    return `${count} ${t(key)}`;
   };
 
   const resolveTagLabel = (tagEntry: PhoneDetails['topTags'][number]) => {
@@ -429,8 +384,6 @@ export default function PhoneDetailScreen() {
               {displayData?.topTags && displayData.topTags.length > 0 ? (
                 displayData.topTags.map((tagEntry) => {
                   const tagColor = resolveTagColor(tagEntry);
-                  const isVotingThis = votingTagId === tagEntry.id;
-                  const canVote = isValidTagId(tagEntry.id);
 
                   return (
                     <ThemedView
@@ -439,36 +392,21 @@ export default function PhoneDetailScreen() {
                       style={[styles.tagItem, { borderColor: theme.backgroundSelected }]}
                     >
                       <View style={styles.tagItemLeft}>
-                        <View style={[styles.tagIcon, { backgroundColor: tagColor + '20' }]}>
-                          <Ionicons name="pricetag" size={20} color={tagColor} />
+                        <View
+                          style={[
+                            styles.tagIcon,
+                            {
+                              backgroundColor: theme.background,
+                              borderColor: tagColor + '35',
+                            },
+                          ]}
+                        >
+                          <Ionicons name="pricetag" size={16} color={tagColor} />
                         </View>
                         <View style={styles.tagTextBlock}>
                           <ThemedText type="default">{resolveTagLabel(tagEntry)}</ThemedText>
-                          <ThemedText type="small" themeColor="textSecondary">
-                            {formatVoteCount(tagEntry.upvoteCount)}
-                          </ThemedText>
                         </View>
                       </View>
-                      <TouchableOpacity
-                        style={[
-                          styles.voteButton,
-                          !canVote && styles.voteButtonDisabled,
-                          isVotingThis && styles.voteButtonActive,
-                        ]}
-                        onPress={() => handleVote(tagEntry.id)}
-                        disabled={!canVote || isVotingThis}
-                        activeOpacity={0.7}
-                      >
-                        {isVotingThis ? (
-                          <ActivityIndicator size="small" color="#22c55e" />
-                        ) : (
-                          <Ionicons
-                            name="caret-up"
-                            size={24}
-                            color={canVote ? '#22c55e' : theme.textSecondary}
-                          />
-                        )}
-                      </TouchableOpacity>
                     </ThemedView>
                   );
                 })
@@ -477,7 +415,9 @@ export default function PhoneDetailScreen() {
                   type="backgroundElement"
                   style={[styles.emptyTags, { borderColor: theme.backgroundSelected }]}
                 >
-                  <Ionicons name="pricetags-outline" size={32} color={theme.textSecondary} />
+                  <View style={[styles.emptyTagsIcon, { backgroundColor: BRAND_COLOR + '18' }]}>
+                    <Ionicons name="pricetags" size={28} color={BRAND_COLOR} />
+                  </View>
                   <ThemedText themeColor="textSecondary" style={styles.emptyText}>
                     {t('phone.noTags')}
                   </ThemedText>

@@ -65,7 +65,6 @@
     "sms": "SMS",
     "votes": "community votes",
     "vote": "vote",
-    "votes_plural": "votes",
     "spamReports": "Spam reports",
     "totalSearches": "Total lookups",
     "lastActivity": "Last activity",
@@ -76,7 +75,6 @@
     "retry": "Try again",
     "tagAdded": "Tag added successfully",
     "duplicateTag": "You already added this tag",
-    "cannotVoteOwnTag": "You cannot vote on your own tag",
     "allTagsAdded": "You have already added all available tags for this number"
   },
   "explore": {

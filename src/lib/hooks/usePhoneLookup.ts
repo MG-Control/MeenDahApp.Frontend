@@ -6,8 +6,6 @@ export interface TagEntry {
   id: number;
   text: string;
   category: number;
-  upvoteCount: number;
-  downvoteCount: number;
   createdAt: string;
 }
 
