@@ -5,16 +5,18 @@ export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Spacing.six,
+  },
   header: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.one,
   },
   container: {
-    flex: 1,
     paddingTop: Spacing.two,
     paddingHorizontal: Spacing.five,
-    justifyContent: 'space-between',
-    // paddingVertical: Spacing.six,
+    gap: Spacing.five,
   },
   branding: {
     alignItems: 'center',
@@ -59,9 +61,44 @@ export const styles = StyleSheet.create({
   },
   actions: {
     marginBottom: Spacing.four,
+    gap: Spacing.four,
+  },
+  modeSwitcher: {
+    borderRadius: 18,
+    padding: Spacing.one,
+    flexDirection: 'row',
+    gap: Spacing.one,
+  },
+  modeButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+  },
+  modeButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modeButtonTextActive: {
+    color: '#fff',
+  },
+  formCard: {
+    borderRadius: 24,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  inputGroup: {
+    gap: Spacing.two,
+  },
+  input: {
+    minHeight: 54,
+    borderRadius: 16,
+    paddingHorizontal: Spacing.three,
+    fontSize: 16,
   },
   features: {
-    marginBottom: Spacing.five,
     gap: Spacing.three,
   },
   featureRow: {
@@ -92,7 +129,22 @@ export const styles = StyleSheet.create({
       },
     }),
   },
-  googleIconContainer: {
+  secondaryButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderColor: '#0f766e',
+    backgroundColor: 'rgba(15, 118, 110, 0.08)',
+  },
+  secondaryButtonText: {
+    color: '#0f766e',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  iconContainer: {
     backgroundColor: '#fff',
     padding: 6,
     borderRadius: 8,
@@ -101,5 +153,9 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  helperText: {
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

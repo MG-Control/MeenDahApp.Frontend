@@ -4,13 +4,29 @@ import { useTheme } from '@/hooks/use-theme';
 import apiClient from '@/lib/api/client';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { Ionicons } from '@expo/vector-icons';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, I18nManager, Image, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  I18nManager,
+  Image,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './styles';
+
+type AuthMode = 'login' | 'register';
+type AuthMethod = 'password' | 'otp';
+
+const DEFAULT_EMAIL = 'mosaad.ghanem@nicedeer.com';
+const DEFAULT_PHONE = '01205808516';
+const DEFAULT_PASSWORD = DEFAULT_PHONE;
+const DEFAULT_OTP = '123456';
+const DEFAULT_DISPLAY_NAME = 'Mosaad Ghanem';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -18,66 +34,174 @@ export default function WelcomeScreen() {
   const isArabic = i18n.language === 'ar';
   const needsRTLFlip = isArabic !== I18nManager.isRTL;
   const theme = useTheme();
+  const [mode, setMode] = useState<AuthMode>('login');
+  const [method, setMethod] = useState<AuthMethod>('password');
   const [loading, setLoading] = useState(false);
+  const [displayName, setDisplayName] = useState(DEFAULT_DISPLAY_NAME);
+  const [identifier, setIdentifier] = useState(DEFAULT_PHONE);
+  const [password, setPassword] = useState(DEFAULT_PASSWORD);
+  const [otpCode, setOtpCode] = useState(DEFAULT_OTP);
   const { setTokens, setUser } = useAuthStore();
 
-  useEffect(() => {
-    const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-    console.log('[Auth] Configuring Google Sign-In with WebClientId:', webClientId);
-    GoogleSignin.configure({
-      webClientId,
-      offlineAccess: true,
-    });
-  }, []);
+  const normalizePhoneNumber = (value: string) => value.replace(/[^\d+]/g, '');
 
-  const handleGoogleSignIn = async () => {
+  const applyDefaultValues = (nextMode: AuthMode, nextMethod = method) => {
+    setMode(nextMode);
+    setMethod(nextMethod);
+    setDisplayName(DEFAULT_DISPLAY_NAME);
+    setIdentifier(nextMode === 'login' ? DEFAULT_PHONE : DEFAULT_EMAIL);
+    setPassword(DEFAULT_PASSWORD);
+    setOtpCode(DEFAULT_OTP);
+  };
+
+  const normalizeIdentifier = () => {
+    const trimmedIdentifier = identifier.trim();
+    const isEmail = trimmedIdentifier.includes('@');
+    const phoneDigits = trimmedIdentifier.replace(/\D/g, '');
+
+    if (isEmail) {
+      if (trimmedIdentifier.length < 5) {
+        Alert.alert(t('common.error'), t('auth.identifierValidation'));
+        return null;
+      }
+
+      return {
+        normalizedIdentifier: trimmedIdentifier.toLowerCase(),
+        isEmail: true,
+      };
+    }
+
+    if (phoneDigits.length < 10) {
+      Alert.alert(t('common.error'), t('auth.identifierValidation'));
+      return null;
+    }
+
+    return {
+      normalizedIdentifier: normalizePhoneNumber(trimmedIdentifier),
+      isEmail: false,
+    };
+  };
+
+  const validateForm = () => {
+    if (mode === 'register' && displayName.trim().length < 2) {
+      Alert.alert(t('common.error'), t('auth.nameValidation'));
+      return false;
+    }
+
+    if (!normalizeIdentifier()) {
+      return false;
+    }
+
+    if (method === 'password' && password.length < 6) {
+      Alert.alert(t('common.error'), t('auth.passwordValidation'));
+      return false;
+    }
+
+    if (method === 'otp' && otpCode.trim().length < 6) {
+      Alert.alert(t('common.error'), t('auth.otpValidation'));
+      return false;
+    }
+
+    return true;
+  };
+
+  const resolveDisplayName = (normalizedIdentifier: string, isEmail: boolean) =>
+    mode === 'register'
+      ? displayName.trim()
+      : isEmail
+        ? normalizedIdentifier.split('@')[0] || t('auth.defaultUserName')
+        : t('auth.defaultUserName');
+
+  const handlePasswordAuth = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    const normalized = normalizeIdentifier();
+    if (!normalized) {
+      return;
+    }
+
     try {
       setLoading(true);
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      
-      if (userInfo.type === 'success') {
-        const idToken = userInfo.data?.idToken;
-        const googleUser = userInfo.data?.user;
 
-        if (!idToken || !googleUser) throw new Error('No user data found');
+      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register';
+      const payload =
+        mode === 'login'
+          ? {
+              identifier: normalized.normalizedIdentifier,
+              password,
+            }
+          : {
+              identifier: normalized.normalizedIdentifier,
+              password,
+              displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
+            };
 
-        try {
-          // Attempt to sync with backend
-          console.log('[Auth] Syncing with backend...');
-          const { data } = await apiClient.post('/auth/google', { idToken });
-          
-          setTokens(data.accessToken, data.refreshToken);
-          setUser(data.user);
-          console.log('Backend login successful:', data.user.displayName);
-        } catch (apiError) {
-          console.warn('[Auth] Backend sync failed, falling back to client-side flow:', apiError);
-          
-          // Fallback: Use Google data directly (Client-side flow)
-          setUser({
-            id: googleUser.id,
-            email: googleUser.email,
-            displayName: googleUser.name || '',
-            photoURL: googleUser.photo || undefined,
-          });
-          // Set dummy tokens to bypass auth checks if necessary
-          setTokens('client-side-token', 'client-side-refresh-token');
-          console.log('Client-side login successful:', googleUser.name);
-        }
-        
-        router.replace('/');
-      }
+      const { data } = await apiClient.post(endpoint, payload);
+
+      setTokens(data.accessToken, data.refreshToken);
+      setUser(data.user);
+      router.replace('/');
     } catch (error: any) {
-      console.error('Sign-in error:', error);
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // Already in progress
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Error', 'Google Play Services not available');
-      } else {
-        Alert.alert('Error', error.message || 'Something went wrong');
+      Alert.alert(t('common.error'), error?.response?.data || error?.message || t('common.error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    const normalized = normalizeIdentifier();
+    if (!normalized) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data } = await apiClient.post('/auth/send-otp', {
+        identifier: normalized.normalizedIdentifier,
+        mode,
+        displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
+        password,
+      });
+
+      if (data?.otpCode) {
+        setOtpCode(data.otpCode);
       }
+
+      Alert.alert(t('common.success'), t('auth.otpSent'));
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error?.response?.data || error?.message || t('common.error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    const normalized = normalizeIdentifier();
+    if (!normalized) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data } = await apiClient.post('/auth/verify-otp', {
+        identifier: normalized.normalizedIdentifier,
+        otpCode,
+        mode,
+        displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
+        password,
+      });
+
+      setTokens(data.accessToken, data.refreshToken);
+      setUser(data.user);
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error?.response?.data || error?.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -85,64 +209,224 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
-        <LanguageSwitcher />
-      </View>
-      
-      <View style={styles.container}>
-        {/* Top Branding Section */}
-        <View style={styles.branding}>
-          <View style={[styles.logoContainer, { backgroundColor: theme.backgroundElement }]}>
-            <Image 
-              source={require('@/assets/images/expo-logo.png')} 
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <ThemedText type="title" style={styles.appName}>
-            {t('common.appName')}
-          </ThemedText>
-          <View style={[styles.indicator, { backgroundColor: '#3c87f7' }]} />
-          <ThemedText style={styles.tagline} themeColor="textSecondary">
-            {t('auth.tagline')}
-          </ThemedText>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <LanguageSwitcher />
         </View>
 
-        {/* Bottom Action Section */}
-        <View style={styles.actions}>
-          <View style={[styles.features, needsRTLFlip && { alignItems: 'flex-end' }]}>
-            <View style={[styles.featureRow, needsRTLFlip && { flexDirection: 'row-reverse' }]}>
-              <View style={[styles.iconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-                <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
-              </View>
-              <ThemedText type="smallBold">{t('auth.featureCallerId')}</ThemedText>
+        <View style={styles.container}>
+          <View style={styles.branding}>
+            <View style={[styles.logoContainer, { backgroundColor: theme.backgroundElement }]}>
+              <Image
+                source={require('@/assets/images/expo-logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-            <View style={[styles.featureRow, needsRTLFlip && { flexDirection: 'row-reverse' }]}>
-              <View style={[styles.iconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                <Ionicons name="ban" size={20} color="#ef4444" />
-              </View>
-              <ThemedText type="smallBold">{t('auth.featureSpamBlock')}</ThemedText>
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={[
-              styles.signInButton, 
-              loading && { opacity: 0.7 },
-              { backgroundColor: '#3c87f7', flexDirection: needsRTLFlip ? 'row-reverse' : 'row' }
-            ]}
-            onPress={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <View style={styles.googleIconContainer}>
-              <Ionicons name="logo-google" size={20} color="#3c87f7" />
-            </View>
-            <ThemedText style={styles.signInText}>
-              {loading ? t('common.loading') : t('auth.googleSignIn')}
+            <ThemedText type="title" style={styles.appName}>
+              {t('common.appName')}
             </ThemedText>
-          </TouchableOpacity>
+            <View style={[styles.indicator, { backgroundColor: '#3c87f7' }]} />
+            <ThemedText style={styles.tagline} themeColor="textSecondary">
+              {t('auth.tagline')}
+            </ThemedText>
+          </View>
+
+          <View style={styles.actions}>
+            <View style={[styles.modeSwitcher, { backgroundColor: theme.backgroundElement }]}>
+              {(['login', 'register'] as AuthMode[]).map((item) => {
+                const active = mode === item;
+                return (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.modeButton, active && { backgroundColor: '#3c87f7' }]}
+                    onPress={() => applyDefaultValues(item)}
+                  >
+                    <ThemedText style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
+                      {item === 'login' ? t('auth.login') : t('auth.register')}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={[styles.modeSwitcher, { backgroundColor: theme.backgroundElement }]}>
+              {(['password', 'otp'] as AuthMethod[]).map((item) => {
+                const active = method === item;
+                return (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.modeButton, active && { backgroundColor: '#0f766e' }]}
+                    onPress={() => applyDefaultValues(mode, item)}
+                  >
+                    <ThemedText style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
+                      {item === 'password' ? t('auth.passwordMethod') : t('auth.otpMethod')}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={[styles.formCard, { backgroundColor: theme.backgroundElement }]}>
+              {mode === 'register' ? (
+                <View style={styles.inputGroup}>
+                  <ThemedText type="smallBold">{t('auth.nameLabel')}</ThemedText>
+                  <TextInput
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    placeholder={t('auth.namePlaceholder')}
+                    placeholderTextColor={theme.textSecondary}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.background,
+                        color: theme.text,
+                        textAlign: needsRTLFlip ? 'right' : 'left',
+                      },
+                    ]}
+                  />
+                </View>
+              ) : null}
+
+              <View style={styles.inputGroup}>
+                <ThemedText type="smallBold">{t('auth.identifierLabel')}</ThemedText>
+                <TextInput
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  placeholder={t('auth.identifierPlaceholder')}
+                  placeholderTextColor={theme.textSecondary}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.background,
+                      color: theme.text,
+                      textAlign: needsRTLFlip ? 'right' : 'left',
+                    },
+                  ]}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <ThemedText type="smallBold">{t('auth.passwordLabel')}</ThemedText>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={t('auth.passwordPlaceholder')}
+                  placeholderTextColor={theme.textSecondary}
+                  secureTextEntry
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.background,
+                      color: theme.text,
+                      textAlign: needsRTLFlip ? 'right' : 'left',
+                    },
+                  ]}
+                />
+              </View>
+
+              {method === 'otp' ? (
+                <View style={styles.inputGroup}>
+                  <ThemedText type="smallBold">{t('auth.otpLabel')}</ThemedText>
+                  <TextInput
+                    value={otpCode}
+                    onChangeText={setOtpCode}
+                    placeholder={t('auth.otpPlaceholder')}
+                    placeholderTextColor={theme.textSecondary}
+                    keyboardType="number-pad"
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.background,
+                        color: theme.text,
+                        textAlign: needsRTLFlip ? 'right' : 'left',
+                      },
+                    ]}
+                  />
+                </View>
+              ) : null}
+
+              {method === 'password' ? (
+                <TouchableOpacity
+                  style={[
+                    styles.signInButton,
+                    loading && { opacity: 0.7 },
+                    { backgroundColor: '#3c87f7', flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
+                  ]}
+                  onPress={handlePasswordAuth}
+                  disabled={loading}
+                >
+                  <View style={styles.iconContainer}>
+                    <Ionicons name={mode === 'login' ? 'log-in-outline' : 'person-add-outline'} size={20} color="#3c87f7" />
+                  </View>
+                  <ThemedText style={styles.signInText}>
+                    {loading
+                      ? t('common.loading')
+                      : mode === 'login'
+                        ? t('auth.loginButton')
+                        : t('auth.registerButton')}
+                  </ThemedText>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.secondaryButton,
+                      loading && { opacity: 0.7 },
+                      { flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
+                    ]}
+                    onPress={handleSendOtp}
+                    disabled={loading}
+                  >
+                    <Ionicons name="paper-plane-outline" size={18} color="#0f766e" />
+                    <ThemedText style={styles.secondaryButtonText}>{t('auth.sendOtpButton')}</ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.signInButton,
+                      loading && { opacity: 0.7 },
+                      { backgroundColor: '#0f766e', flexDirection: needsRTLFlip ? 'row-reverse' : 'row' },
+                    ]}
+                    onPress={handleVerifyOtp}
+                    disabled={loading}
+                  >
+                    <View style={styles.iconContainer}>
+                      <Ionicons name="key-outline" size={20} color="#0f766e" />
+                    </View>
+                    <ThemedText style={styles.signInText}>{t('auth.verifyOtpButton')}</ThemedText>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <ThemedText style={styles.helperText} themeColor="textSecondary">
+                {method === 'password' ? t('auth.passwordHelper') : t('auth.otpHelper')}
+              </ThemedText>
+            </View>
+
+            <View style={[styles.features, needsRTLFlip && { alignItems: 'flex-end' }]}>
+              <View style={[styles.featureRow, needsRTLFlip && { flexDirection: 'row-reverse' }]}>
+                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
+                </View>
+                <ThemedText type="smallBold">{t('auth.featureCallerId')}</ThemedText>
+              </View>
+              <View style={[styles.featureRow, needsRTLFlip && { flexDirection: 'row-reverse' }]}>
+                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                  <Ionicons name="ban" size={20} color="#ef4444" />
+                </View>
+                <ThemedText type="smallBold">{t('auth.featureSpamBlock')}</ThemedText>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
