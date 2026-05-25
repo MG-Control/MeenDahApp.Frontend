@@ -7,7 +7,10 @@
     "save": "Save",
     "add": "Add",
     "cancel": "Cancel",
+    "delete": "Delete",
+    "skip": "Skip",
     "search": "Search",
+    "searchPlaceholder": "Search...",
     "logout": "Log Out",
     "unknownCaller": "Unknown Caller"
   },
@@ -108,6 +111,13 @@
     "syncButton": "Sync Now",
     "permissionDenied": "Permission Denied",
     "permissionReason": "We need contact access to identify unknown callers.",
-    "syncSuccess": "Synced successfully!"
+    "syncSuccess": "Synced successfully!",
+    "tagListTitle": "Tag List",
+    "continueTagging": "Continue Tagging",
+    "tagHint": "A tag will be added to selected contacts.",
+    "selected": "{{count}} selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "unknown": "Unknown"
   }
 }

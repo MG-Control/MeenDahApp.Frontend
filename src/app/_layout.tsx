@@ -42,6 +42,13 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
+          <Stack.Screen
+            name="contact-picker"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen 
             name="phone/[number]" 
             options={{ 

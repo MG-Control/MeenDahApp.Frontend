@@ -7,7 +7,10 @@
     "save": "حفظ",
     "add": "إضافة",
     "cancel": "إلغاء",
+    "delete": "حذف",
+    "skip": "تخطي",
     "search": "بحث",
+    "searchPlaceholder": "بحث...",
     "logout": "تسجيل الخروج",
     "unknownCaller": "متصل مجهول"
   },
@@ -108,6 +111,13 @@
     "syncButton": "مزامنة الآن",
     "permissionDenied": "تم رفض الإذن",
     "permissionReason": "نحتاج الوصول لجهات الاتصال لتحديد هوية المتصلين المجهولين.",
-    "syncSuccess": "تمت المزامنة بنجاح!"
+    "syncSuccess": "تمت المزامنة بنجاح!",
+    "tagListTitle": "قائمة الوسوم",
+    "continueTagging": "متابعة الوسم",
+    "tagHint": "سيتم إضافة وسم إلى جهات الاتصال المحددة.",
+    "selected": "{{count}} محدد",
+    "selectAll": "تحديد الكل",
+    "deselectAll": "إلغاء تحديد الكل",
+    "unknown": "غير معروف"
   }
 }
