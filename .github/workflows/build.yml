@@ -22,23 +22,20 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          cache: 'gradle'
+          cache-dependency-path: android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build APK Locally
+        working-directory: android
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
-        run: eas build --platform android --profile preview --local
+        run: ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: ./*.apk
+          path: android/app/build/outputs/apk/release/*.apk

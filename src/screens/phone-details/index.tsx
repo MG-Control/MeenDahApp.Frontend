@@ -49,8 +49,9 @@ function tagAlreadyExists(
 }
 
 export default function PhoneDetailScreen() {
-  const params = useLocalSearchParams<{ number: string }>();
+  const params = useLocalSearchParams<{ number: string; skipLookup?: string }>();
   const phoneNumber = decodePhoneFromRoute(params.number);
+  const shouldSkipInitialLookup = params.skipLookup === '1';
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -62,7 +63,7 @@ export default function PhoneDetailScreen() {
     isError,
     refetch,
     isRefetching,
-  } = usePhoneLookup(phoneNumber);
+  } = usePhoneLookup(phoneNumber, { skipInitialFetch: shouldSkipInitialLookup });
   const { addTagAsync, isAddingTag } = useTags(phoneNumber || '');
 
   const [localPhone, setLocalPhone] = useState<PhoneDetails | null>(null);
@@ -222,7 +223,6 @@ export default function PhoneDetailScreen() {
     {
       title: t('phone.personalInfo'),
       items: [
-        { label: t('phone.userId'), value: displayData?.userId },
         { label: t('phone.gender'), value: displayData?.gender },
         { label: t('phone.birthdate'), value: displayData?.birthdate },
         { label: t('phone.joined'), value: displayData?.joined },
@@ -408,42 +408,6 @@ export default function PhoneDetailScreen() {
             </View>
           )}
 
-          {profileSections.length > 0 ? (
-            <View style={styles.profileSections}>
-              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.profileSectionsTitle}>
-                {t('phone.profileDetails')}
-              </ThemedText>
-
-              {profileSections.map((section) => (
-                <ThemedView
-                  key={section.title}
-                  type="backgroundElement"
-                  style={[styles.profileSectionCard, { borderColor: theme.backgroundSelected }]}
-                >
-                  <ThemedText type="smallBold" style={styles.profileSectionTitle} themeColor="textSecondary">
-                    {section.title}
-                  </ThemedText>
-
-                  <View style={styles.profileGrid}>
-                    {section.items.map((row) => (
-                      <View
-                        key={row.label}
-                        style={[styles.profileItem, { borderColor: theme.backgroundSelected }]}
-                      >
-                        <ThemedText type="small" themeColor="textSecondary">
-                          {row.label}
-                        </ThemedText>
-                        <ThemedText type="default" style={styles.profileValue} numberOfLines={2}>
-                          {row.value}
-                        </ThemedText>
-                      </View>
-                    ))}
-                  </View>
-                </ThemedView>
-              ))}
-            </View>
-          ) : null}
-
           <ThemedView
             type="backgroundElement"
             style={[styles.card, { borderColor: theme.backgroundSelected }]}
@@ -520,7 +484,7 @@ export default function PhoneDetailScreen() {
                           <Ionicons name="pricetag" size={16} color={tagColor} />
                         </View>
                         <View style={styles.tagTextBlock}>
-                          <ThemedText type="small" numberOfLines={1}>
+                          <ThemedText type="small" style={styles.tagText}>
                             {resolveTagLabel(tagEntry)}
                           </ThemedText>
                         </View>
@@ -543,6 +507,42 @@ export default function PhoneDetailScreen() {
               )}
             </View>
           </View>
+
+          {profileSections.length > 0 ? (
+            <View style={styles.profileSections}>
+              <ThemedText type="smallBold" themeColor="textSecondary" style={styles.profileSectionsTitle}>
+                {t('phone.profileDetails')}
+              </ThemedText>
+
+              {profileSections.map((section) => (
+                <ThemedView
+                  key={section.title}
+                  type="backgroundElement"
+                  style={[styles.profileSectionCard, { borderColor: theme.backgroundSelected }]}
+                >
+                  <ThemedText type="smallBold" style={styles.profileSectionTitle} themeColor="textSecondary">
+                    {section.title}
+                  </ThemedText>
+
+                  <View style={styles.profileGrid}>
+                    {section.items.map((row) => (
+                      <View
+                        key={row.label}
+                        style={[styles.profileItem, { borderColor: theme.backgroundSelected }]}
+                      >
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {row.label}
+                        </ThemedText>
+                        <ThemedText type="default" style={styles.profileValue} numberOfLines={2}>
+                          {row.value}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                </ThemedView>
+              ))}
+            </View>
+          ) : null}
 
           <View style={styles.footerActions}>
             <TouchableOpacity

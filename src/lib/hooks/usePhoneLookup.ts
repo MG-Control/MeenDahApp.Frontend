@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api/client';
 import { encodePhoneForApi } from '@/lib/utils/phoneRoute';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export interface TagEntry {
   id: number;
@@ -32,7 +32,17 @@ export interface PhoneDetails {
   telegramUrl?: string | null;
 }
 
-export const usePhoneLookup = (phoneNumber?: string) => {
+interface UsePhoneLookupOptions {
+  skipInitialFetch?: boolean;
+}
+
+export const usePhoneLookup = (phoneNumber?: string, options?: UsePhoneLookupOptions) => {
+  const queryClient = useQueryClient();
+  const cachedPhone = phoneNumber
+    ? queryClient.getQueryData<PhoneDetails>(['phone', phoneNumber])
+    : undefined;
+  const shouldSkipInitialFetch = Boolean(options?.skipInitialFetch && cachedPhone);
+
   return useQuery({
     queryKey: ['phone', phoneNumber],
     queryFn: async () => {
@@ -42,6 +52,6 @@ export const usePhoneLookup = (phoneNumber?: string) => {
       );
       return data;
     },
-    enabled: !!phoneNumber,
+    enabled: !!phoneNumber && !shouldSkipInitialFetch,
   });
 };

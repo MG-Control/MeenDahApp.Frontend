@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, View } from 'react-native';
@@ -9,17 +10,41 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Avatar } from '@/components/ui/avatar';
 import { LoadingState } from '@/components/ui/loading-state';
+import { UNKNOWN_TAG_ID } from '@/constants/tags';
 import { useTheme } from '@/hooks/use-theme';
+import { PhoneDetails } from '@/lib/hooks/usePhoneLookup';
 import apiClient from '@/lib/api/client';
 import { encodePhoneForRoute } from '@/lib/utils/phoneRoute';
 import { styles } from './styles';
 
+interface SearchResultItem {
+  e164: string;
+  displayName?: string;
+  email?: string;
+  avatarUrl?: string;
+  spamScore?: number;
+  tags?: string[];
+  userId?: string | null;
+  gender?: string | null;
+  residence?: string | null;
+  country?: string | null;
+  birthplace?: string | null;
+  relationship?: string | null;
+  workplace?: string | null;
+  joined?: string | null;
+  birthdate?: string | null;
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
+  telegramUrl?: string | null;
+}
+
 export default function SearchScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const theme = useTheme();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async (text: string) => {
@@ -39,11 +64,40 @@ export default function SearchScreen() {
     }
   };
 
-  const renderResultItem = ({ item }: { item: any }) => (
+  const renderResultItem = ({ item }: { item: SearchResultItem }) => (
     <TouchableOpacity 
       style={[styles.resultCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
       onPress={() => {
-        router.push(`/phone/${encodePhoneForRoute(item.e164)}` as any);
+        const cachedPhone: PhoneDetails = {
+          e164: item.e164,
+          displayName: item.displayName,
+          email: item.email,
+          avatarUrl: item.avatarUrl,
+          userId: item.userId,
+          gender: item.gender,
+          residence: item.residence,
+          country: item.country,
+          birthplace: item.birthplace,
+          relationship: item.relationship,
+          workplace: item.workplace,
+          joined: item.joined,
+          birthdate: item.birthdate,
+          spamScore: item.spamScore ?? 0,
+          totalSearches: 0,
+          lastActivityAt: new Date().toISOString(),
+          tags: (item.tags ?? []).map((text, index) => ({
+            id: -(index + 1),
+            text,
+            category: UNKNOWN_TAG_ID,
+            createdAt: new Date().toISOString(),
+          })),
+          facebookUrl: item.facebookUrl,
+          whatsappUrl: item.whatsappUrl,
+          telegramUrl: item.telegramUrl,
+        };
+
+        queryClient.setQueryData(['phone', item.e164], cachedPhone);
+        router.push(`/phone/${encodePhoneForRoute(item.e164)}?skipLookup=1` as any);
       }}
     >
       <Avatar 
