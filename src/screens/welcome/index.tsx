@@ -21,10 +21,9 @@ import { styles } from './styles';
 
 type AuthMode = 'login' | 'register';
 
-const DEFAULT_EMAIL = 'mosaad.ghanem@nicedeer.com';
 const DEFAULT_PHONE = '01205808516';
-const DEFAULT_DISPLAY_NAME = 'Mosaad Ghanem';
 const DEFAULT_PASSWORD = '01205808516';
+const IS_DEV = __DEV__;
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -34,18 +33,18 @@ export default function WelcomeScreen() {
   const theme = useTheme();
   const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
-  const [displayName, setDisplayName] = useState(DEFAULT_DISPLAY_NAME);
-  const [identifier, setIdentifier] = useState(DEFAULT_PHONE);
-  const [password, setPassword] = useState(DEFAULT_PASSWORD);
+  const [displayName, setDisplayName] = useState('');
+  const [identifier, setIdentifier] = useState(IS_DEV ? DEFAULT_PHONE : '');
+  const [password, setPassword] = useState(IS_DEV ? DEFAULT_PASSWORD : '');
   const { setTokens, setUser } = useAuthStore();
 
   const normalizePhoneNumber = (value: string) => value.replace(/[^\d+]/g, '');
 
   const applyDefaultValues = (nextMode: AuthMode) => {
     setMode(nextMode);
-    setDisplayName(DEFAULT_DISPLAY_NAME);
-    setIdentifier(nextMode === 'login' ? DEFAULT_PHONE : DEFAULT_EMAIL);
-    setPassword(DEFAULT_PASSWORD);
+    setDisplayName('');
+    setIdentifier(IS_DEV && nextMode === 'login' ? DEFAULT_PHONE : '');
+    setPassword(IS_DEV && nextMode === 'login' ? DEFAULT_PASSWORD : '');
   };
 
   const normalizeIdentifier = () => {
