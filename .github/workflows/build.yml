@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: Frontend/meendah/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -24,14 +24,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
-          cache-dependency-path: Frontend/meendah/android/gradle/wrapper/gradle-wrapper.properties
+          cache-dependency-path: android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Install dependencies
-        working-directory: Frontend/meendah
         run: npm ci
 
       - name: Build APK Locally
-        working-directory: Frontend/meendah/android
+        working-directory: android
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: ./gradlew assembleRelease
@@ -40,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: Frontend/meendah/android/app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
