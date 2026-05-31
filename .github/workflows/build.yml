@@ -16,27 +16,29 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: package-lock.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
-          cache-dependency-path: android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build APK Locally
-        working-directory: android
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
-        run: ./gradlew assembleRelease
+        run: eas build --platform android --profile preview --local
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: android/app/build/outputs/apk/release/*.apk
+          path: ./*.apk
