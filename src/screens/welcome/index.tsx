@@ -24,7 +24,7 @@ type AuthMode = 'login' | 'register';
 const DEFAULT_EMAIL = 'mosaad.ghanem@nicedeer.com';
 const DEFAULT_PHONE = '01205808516';
 const DEFAULT_DISPLAY_NAME = 'Mosaad Ghanem';
-const DEFAULT_PASSWORD = '';
+const DEFAULT_PASSWORD = '01205808516';
 
 export default function WelcomeScreen() {
   const router = useRouter();

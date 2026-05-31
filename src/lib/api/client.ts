@@ -1,7 +1,13 @@
 import { useAuthStore } from '@/lib/stores/authStore';
 import axios from 'axios';
 
-const baseURL = (process.env.EXPO_PUBLIC_API_URL || 'https://meendah.mg-control.com').replace(/\/+$/, '');
+const productionBaseURL =
+  process.env.EXPO_PUBLIC_API_URL_PROD ||
+  'https://meendah.mg-control.com';
+
+const developmentBaseURL = process.env.EXPO_PUBLIC_API_URL_DEV || productionBaseURL;
+
+const baseURL = (__DEV__ ? developmentBaseURL : productionBaseURL).replace(/\/+$/, '');
 const apiClient = axios.create({
   baseURL,
   timeout: 60000, // 30 seconds timeout

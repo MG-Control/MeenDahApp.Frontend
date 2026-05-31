@@ -35,12 +35,12 @@ import { styles } from './styles';
 const BRAND_COLOR = '#3c87f7';
 
 function tagAlreadyExists(
-  topTags: PhoneDetails['topTags'] | undefined,
+  tags: PhoneDetails['tags'] | undefined,
   tagId: number
 ): boolean {
-  if (!topTags?.length) return false;
+  if (!tags?.length) return false;
   const tagInfo = getTagById(tagId);
-  return topTags.some(
+  return tags.some(
     (entry) =>
       entry.category === tagId ||
       (tagInfo &&
@@ -84,9 +84,9 @@ export default function PhoneDetailScreen() {
   const suggestedTags = useMemo(() => {
     const query = tagInput.trim();
     const filteredTags = getTagSuggestions(query);
-    if (!displayData?.topTags) return filteredTags;
-    return filteredTags.filter((tag) => !tagAlreadyExists(displayData.topTags, tag.id));
-  }, [displayData?.topTags, tagInput]);
+    if (!displayData?.tags) return filteredTags;
+    return filteredTags.filter((tag) => !tagAlreadyExists(displayData.tags, tag.id));
+  }, [displayData?.tags, tagInput]);
 
   const backIcon = I18nManager.isRTL ? 'arrow-forward' : 'arrow-back';
 
@@ -199,7 +199,7 @@ export default function PhoneDetailScreen() {
     await submitTag(matchingTag?.id ?? UNKNOWN_TAG_ID, matchingTag?.labelEn ?? trimmedText);
   };
 
-  const resolveTagLabel = (tagEntry: PhoneDetails['topTags'][number]) => {
+  const resolveTagLabel = (tagEntry: PhoneDetails['tags'][number]) => {
     const tagInfo =
       getTagById(tagEntry.category) ||
       TAGS.find(
@@ -213,7 +213,7 @@ export default function PhoneDetailScreen() {
     return language === 'ar' ? tagInfo?.labelAr || tagEntry.text : tagInfo?.labelEn || tagEntry.text;
   };
 
-  const resolveTagColor = (tagEntry: PhoneDetails['topTags'][number]) => {
+  const resolveTagColor = (tagEntry: PhoneDetails['tags'][number]) => {
     const tagInfo = getTagById(tagEntry.category);
     return tagInfo?.color || '#6b7280';
   };
@@ -497,8 +497,8 @@ export default function PhoneDetailScreen() {
             </View>
 
             <View style={styles.tagsList}>
-              {displayData?.topTags && displayData.topTags.length > 0 ? (
-                displayData.topTags.map((tagEntry) => {
+              {displayData?.tags && displayData.tags.length > 0 ? (
+                displayData.tags.map((tagEntry) => {
                   const tagColor = resolveTagColor(tagEntry);
 
                   return (
@@ -520,7 +520,9 @@ export default function PhoneDetailScreen() {
                           <Ionicons name="pricetag" size={16} color={tagColor} />
                         </View>
                         <View style={styles.tagTextBlock}>
-                          <ThemedText type="default">{resolveTagLabel(tagEntry)}</ThemedText>
+                          <ThemedText type="small" numberOfLines={1}>
+                            {resolveTagLabel(tagEntry)}
+                          </ThemedText>
                         </View>
                       </View>
                     </ThemedView>

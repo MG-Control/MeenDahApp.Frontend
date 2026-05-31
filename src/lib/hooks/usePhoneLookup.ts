@@ -26,7 +26,7 @@ export interface PhoneDetails {
   spamScore: number;
   totalSearches: number;
   lastActivityAt: string;
-  topTags: TagEntry[];
+  tags: TagEntry[];
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
   telegramUrl?: string | null;
