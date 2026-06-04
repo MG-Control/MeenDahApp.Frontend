@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
   const systemColorScheme = useColorScheme();
   const { theme } = useSettingsStore();
-  const { accessToken, setTokens, setUser } = useAuthStore();
+  const { accessToken, _hasHydrated, setTokens, setUser } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -23,17 +23,17 @@ export default function RootLayout() {
     : (theme === 'dark' ? DarkTheme : DefaultTheme);
 
   useEffect(() => {
-    // Redirect logic
+    console.log('[Layout] hydrated:', _hasHydrated, 'accessToken:', !!accessToken, 'segments:', segments);
+    if (!_hasHydrated) return;
+
     const inAuthGroup = segments[0] === 'welcome';
 
     if (!accessToken && !inAuthGroup) {
-      // Redirect to welcome if not logged in
       router.replace('/welcome');
     } else if (accessToken && inAuthGroup) {
-      // Redirect to home if logged in and trying to access welcome
       router.replace('/');
     }
-  }, [accessToken, segments]);
+  }, [accessToken, segments, _hasHydrated]);
 
   return (
     <QueryClientProvider client={queryClient}>

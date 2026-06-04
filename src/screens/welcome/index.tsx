@@ -213,10 +213,6 @@ export default function WelcomeScreen() {
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold">{t('auth.identifierLabel')}</ThemedText>
                 <View style={[styles.phoneRow, needsRTLFlip && { flexDirection: 'row-reverse' }] }>
-                  <View style={[styles.countryCodeContainer, { backgroundColor: theme.background }]}> 
-                    <ThemedText style={styles.countryCodeText}>🇪🇬 +2</ThemedText>
-                  </View>
-
                   <TextInput
                     value={identifier}
                     onChangeText={setIdentifier}
@@ -234,6 +230,10 @@ export default function WelcomeScreen() {
                       },
                     ]}
                   />
+
+                  <View style={[styles.countryCodeContainer, { backgroundColor: theme.background }]}>
+                    <ThemedText style={styles.countryCodeText}>🇪🇬 +2</ThemedText>
+                  </View>
                 </View>
               </View>
 

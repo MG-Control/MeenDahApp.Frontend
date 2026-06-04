@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,20 +25,49 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
-          cache-dependency-path: android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+
+      - name: Read app version
+        id: app_version
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          CHANNEL=${{ github.ref_name == 'master' && '"stable"' || '"preview"' }}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}-${CHANNEL}-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Build APK Locally
-        working-directory: android
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
-        run: ./gradlew assembleRelease
+        run: eas build --platform android --profile preview --local
 
-      - name: Upload APK
+      - name: Rename APK
+        run: |
+          APK=$(ls ./*.apk | head -n 1)
+          mv "$APK" "./meendah-${{ steps.app_version.outputs.tag }}.apk"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: android/app/build/outputs/apk/release/*.apk
+          path: ./meendah-${{ steps.app_version.outputs.tag }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.app_version.outputs.tag }}
+          name: "MeenDah ${{ steps.app_version.outputs.version }} (${{ steps.app_version.outputs.channel }}) #${{ github.run_number }}"
+          body: |
+            **Channel:** ${{ steps.app_version.outputs.channel }}
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+          files: ./meendah-${{ steps.app_version.outputs.tag }}.apk
+          prerelease: ${{ github.ref_name != 'master' }}
