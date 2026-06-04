@@ -56,6 +56,13 @@ export default function RootLayout() {
               presentation: 'card'
             }} 
           />
+          <Stack.Screen
+            name="tags"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
         </Stack>
       </ThemeProvider>
     </QueryClientProvider>

@@ -44,8 +44,7 @@
     "otpValidation": "OTP code must be at least 6 digits.",
     "defaultUserName": "User",
     "tagline": "Identify unknown calls and block spam with the power of community.",
-    "featureCallerId": "Real-time caller identification",
-    "featureSpamBlock": "Automatic spam blocking"
+    "featureCallerId": "Identify unknown callers & see what tags people saved your number with, instantly and securely!"
   },
   "profile": {
     "title": "Profile",
@@ -55,7 +54,27 @@
     "anonymousDesc": "Hide your identity when tagging",
     "appPreferences": "App Preferences",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "tagsEntryTitle": "My Tags",
+    "tagsEntrySubtitle": "Tags count: {{count}}"
+  },
+  "tags": {
+    "title": "My Tags",
+    "subtitle": "Long press any tag to hide or show it again",
+    "back": "Back",
+    "visibleTitle": "Visible Tags",
+    "hiddenTitle": "Hidden Tags",
+    "count": "{{count}} tags",
+    "visibleEmpty": "No visible tags yet.",
+    "hiddenEmpty": "No hidden tags.",
+    "hide": "Hide",
+    "show": "Show",
+    "confirmHideTitle": "Hide Tag",
+    "confirmShowTitle": "Show Tag",
+    "confirmHideMessage": "Are you sure you want to hide the tag \"{{text}}\"?",
+    "confirmShowMessage": "Are you sure you want to show the tag \"{{text}}\"?",
+    "cancel": "Cancel",
+    "ok": "OK"
   },
   "phone": {
     "securityAnalysis": "SECURITY ANALYSIS",

@@ -98,6 +98,25 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     fontSize: 16,
   },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  countryCodeContainer: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 12,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  countryCodeText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  phoneInput: {
+    flex: 1,
+  },
   features: {
     gap: Spacing.three,
   },

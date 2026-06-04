@@ -44,7 +44,7 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: Spacing.three,
-    marginTop: Spacing.four,
+    marginTop: Spacing.two,
   },
   menuButton: {
     flexDirection: 'row',
@@ -118,5 +118,30 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  tagsContainer: {
+    marginTop: Spacing.two,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+    justifyContent: 'center',
+  },
+  tagChip: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: 999,
+    margin: 4,
+  },
+  tagText: {
+    fontSize: 13,
+  },
+  tagHint: {
+    marginTop: 4,
+    fontSize: 11,
+  },
+  hiddenSectionTitle: {
+    fontSize: 12,
+    marginTop: Spacing.two,
   },
 });

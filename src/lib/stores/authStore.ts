@@ -10,7 +10,7 @@ interface AuthState {
     phoneNumber?: string;
     displayName?: string;
     email?: string;
-    photoURL?: string;
+    avatarUrl?: string;
   } | null;
   setTokens: (accessToken: string, refreshToken: string) => void;
   setUser: (user: any) => void;

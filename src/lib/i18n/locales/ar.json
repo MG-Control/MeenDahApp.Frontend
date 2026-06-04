@@ -44,8 +44,7 @@
     "otpValidation": "رمز التحقق يجب أن يكون 6 أرقام على الأقل.",
     "defaultUserName": "مستخدم",
     "tagline": "حدد المكالمات المجهولة وامنع الإزعاج بقوة المجتمع.",
-    "featureCallerId": "تحديد هوية المتصل في الوقت الفعلي",
-    "featureSpamBlock": "حظر المكالمات المزعجة تلقائياً"
+    "featureCallerId": "اعرف مين بيكلمك وشوف الناس مسمياك إيه في تليفوناتهم بسرعة وأمان!"
   },
   "profile": {
     "title": "الملف الشخصي",
@@ -55,7 +54,27 @@
     "anonymousDesc": "إخفاء هويتك عند إضافة الوسوم",
     "appPreferences": "تفضيلات التطبيق",
     "language": "اللغة",
-    "theme": "المظهر"
+    "theme": "المظهر",
+    "tagsEntryTitle": "وسومي",
+    "tagsEntrySubtitle": "عدد الوسوم: {{count}}"
+  },
+  "tags": {
+    "title": "وسومي",
+    "subtitle": "اضغط مطولاً على أي تاج لإخفائه أو إظهاره من جديد",
+    "back": "رجوع",
+    "visibleTitle": "الوسوم الظاهرة",
+    "hiddenTitle": "الوسوم المخفية",
+    "count": "{{count}} وسم",
+    "visibleEmpty": "لا توجد وسوم ظاهرة حالياً.",
+    "hiddenEmpty": "لا توجد وسوم مخفية.",
+    "hide": "إخفاء",
+    "show": "إظهار",
+    "confirmHideTitle": "إخفاء التاج",
+    "confirmShowTitle": "إظهار التاج",
+    "confirmHideMessage": "هل أنت متأكد أنك تريد إخفاء التاج \"{{text}}\"؟",
+    "confirmShowMessage": "هل أنت متأكد أنك تريد إظهار التاج \"{{text}}\"؟",
+    "cancel": "إلغاء",
+    "ok": "موافق"
   },
   "phone": {
     "securityAnalysis": "التحليل الأمني",

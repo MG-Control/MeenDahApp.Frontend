@@ -69,8 +69,12 @@ export default function WelcomeScreen() {
       return null;
     }
 
+    const normalizedPhone = trimmedIdentifier.startsWith('+')
+      ? normalizePhoneNumber(trimmedIdentifier)
+      : `+2${phoneDigits}`;
+
     return {
-      normalizedIdentifier: normalizePhoneNumber(trimmedIdentifier),
+      normalizedIdentifier: normalizedPhone,
       isEmail: false,
     };
   };
@@ -129,7 +133,7 @@ export default function WelcomeScreen() {
       const { data } = await apiClient.post(endpoint, payload);
 
       setTokens(data.accessToken, data.refreshToken);
-      setUser(data.user);
+      setUser({ ...data.user, avatarUrl: data.user?.avatarUrl });
       router.replace('/');
     } catch (error: any) {
       Alert.alert(t('common.error'), error?.response?.data || error?.message || t('common.error'));
@@ -208,22 +212,29 @@ export default function WelcomeScreen() {
 
               <View style={styles.inputGroup}>
                 <ThemedText type="smallBold">{t('auth.identifierLabel')}</ThemedText>
-                <TextInput
-                  value={identifier}
-                  onChangeText={setIdentifier}
-                  placeholder={t('auth.identifierPlaceholder')}
-                  placeholderTextColor={theme.textSecondary}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.background,
-                      color: theme.text,
-                      textAlign: needsRTLFlip ? 'right' : 'left',
-                    },
-                  ]}
-                />
+                <View style={[styles.phoneRow, needsRTLFlip && { flexDirection: 'row-reverse' }] }>
+                  <View style={[styles.countryCodeContainer, { backgroundColor: theme.background }]}> 
+                    <ThemedText style={styles.countryCodeText}>🇪🇬 +2</ThemedText>
+                  </View>
+
+                  <TextInput
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    placeholder={t('auth.identifierPlaceholder')}
+                    placeholderTextColor={theme.textSecondary}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    style={[
+                      styles.input,
+                      styles.phoneInput,
+                      {
+                        backgroundColor: theme.background,
+                        color: theme.text,
+                        textAlign: needsRTLFlip ? 'right' : 'left',
+                      },
+                    ]}
+                  />
+                </View>
               </View>
 
               <View style={styles.inputGroup}>
@@ -278,12 +289,7 @@ export default function WelcomeScreen() {
                 </View>
                 <ThemedText type="smallBold">{t('auth.featureCallerId')}</ThemedText>
               </View>
-              <View style={[styles.featureRow, needsRTLFlip && { flexDirection: 'row-reverse' }]}>
-                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-                  <Ionicons name="ban" size={20} color="#ef4444" />
-                </View>
-                <ThemedText type="smallBold">{t('auth.featureSpamBlock')}</ThemedText>
-              </View>
+              
             </View>
           </View>
         </View>

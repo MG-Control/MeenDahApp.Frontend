@@ -10,41 +10,92 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, Switch, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Switch, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
+import apiClient from '@/lib/api/client';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const { t } = useTranslation();
-  const { user, logout } = useAuthStore();
+  const router = useRouter();
+  const { user, logout, setUser } = useAuthStore();
   const { theme: currentTheme, setTheme } = useSettingsStore();
   const [anonymous, setAnonymous] = useState(false);
   const { syncContacts, isSyncing } = useContactSync();
+  const [refreshing, setRefreshing] = useState(false);
+  const [userTags, setUserTags] = useState<any[]>([]);
+
+  const fetchUserTags = async () => {
+    try {
+      const { data } = await apiClient.get('/auth/me/tags');
+      setUserTags(data || []);
+    } catch (e) {
+      console.warn('Failed to fetch user tags', e);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const { data } = await apiClient.get('/auth/me');
+      // API returns UserDto
+      setUser({ id: data.id, phoneNumber: data.phoneNumber, displayName: data.displayName, email: data.email, photoURL: data.avatarUrl, isAnonymousTagger: data.isAnonymousTagger });
+      await fetchUserTags();
+    } catch (e) {
+      console.warn('Failed to refresh profile', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchUserTags();
+  }, []);
 
   return (
     <ThemedView style={styles.container}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + BottomTabInset + Spacing.four }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         {/* Header with User Info */}
         <View style={[styles.header, { backgroundColor: '#3c87f7', paddingTop: insets.top + Spacing.four }]}>
           <Avatar 
-            url={user?.photoURL} 
+            url={user?.avatarUrl} 
             name={user?.displayName || user?.email || 'User'} 
             size={100}
           />
           <ThemedText style={styles.userName}>{user?.displayName || 'User'}</ThemedText>
           <ThemedText style={styles.userEmail}>{user?.email || user?.phoneNumber}</ThemedText>
-          
+           
           <TouchableOpacity style={styles.editButton}>
             <ThemedText style={styles.editButtonText}>{t('profile.edit')}</ThemedText>
           </TouchableOpacity>
         </View>
 
         <View style={styles.content}>
+          <TouchableOpacity
+            onPress={() => router.push('/tags')}
+            style={[styles.menuButton, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected, marginTop: Spacing.two }]}
+          >
+            <View style={styles.menuButtonLeft}>
+              <View style={[styles.iconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                <Ionicons name="pricetags" size={22} color="#6366f1" />
+              </View>
+              <View>
+                <ThemedText type="default">{t('profile.tagsEntryTitle')}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {t('profile.tagsEntrySubtitle', { count: userTags.length })}
+                </ThemedText>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+          
           <ThemedText style={styles.sectionTitle} themeColor="textSecondary">
             {t('profile.accountSettings')}
           </ThemedText>
