@@ -17,6 +17,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import apiClient from '@/lib/api/client';
 import { ContactEntry, useContactPickerStore } from '@/lib/stores/contactPickerStore';
+import { dedupeContactsByPhone } from '@/lib/utils/phoneNormalizer';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { styles } from './styles';
 
@@ -27,19 +28,24 @@ export default function ContactPickerScreen() {
   const { pendingContacts, clear } = useContactPickerStore();
   const { setHasSyncedContacts } = useSettingsStore();
 
+  const contacts = useMemo(
+    () => dedupeContactsByPhone(pendingContacts),
+    [pendingContacts]
+  );
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(
-    () => new Set(pendingContacts.map(c => c.phoneNumber))
+    () => new Set(contacts.map(c => c.phoneNumber))
   );
 
   const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return pendingContacts;
+    if (!searchQuery.trim()) return contacts;
     const q = searchQuery.toLowerCase();
-    return pendingContacts.filter(
+    return contacts.filter(
       c => c.name.toLowerCase().includes(q) || c.phoneNumber.includes(q)
     );
-  }, [pendingContacts, searchQuery]);
+  }, [contacts, searchQuery]);
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedPhones.has(c.phoneNumber));
 
@@ -81,7 +87,7 @@ export default function ContactPickerScreen() {
   });
 
   const handleContinue = () => {
-    const selected = pendingContacts.filter(c => selectedPhones.has(c.phoneNumber));
+    const selected = contacts.filter(c => selectedPhones.has(c.phoneNumber));
     if (selected.length === 0) return;
     syncMutation.mutate(selected);
   };
@@ -131,7 +137,7 @@ export default function ContactPickerScreen() {
     );
   }, [selectedPhones, theme, toggleContact, t]);
 
-  const selectedCount = pendingContacts.filter(c => selectedPhones.has(c.phoneNumber)).length;
+  const selectedCount = contacts.filter(c => selectedPhones.has(c.phoneNumber)).length;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>

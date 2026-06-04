@@ -1,5 +1,5 @@
 import { useContactPickerStore } from '@/lib/stores/contactPickerStore';
-import { normalizePhoneNumber } from '@/lib/utils/phoneNormalizer';
+import { dedupeContactsByPhone, normalizePhoneNumber } from '@/lib/utils/phoneNormalizer';
 import * as Contacts from 'expo-contacts';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -34,17 +34,18 @@ export const useContactSync = () => {
         fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers, Contacts.Fields.Emails, Contacts.Fields.Image],
       });
 
-      const formattedContacts = data
-        .filter(c => c.phoneNumbers && c.phoneNumbers.length > 0)
-        .flatMap(c =>
-          (c.phoneNumbers || []).map(p => ({
-            name: c.name ?? '',
-            phoneNumber: normalizePhoneNumber(p.number || ''),
-            email: c.emails?.[0]?.email,
-            avatarUri: c.imageAvailable ? c.image?.uri : undefined,
-          }))
-        )
-        .filter(c => c.phoneNumber.startsWith('+'));
+      const formattedContacts = dedupeContactsByPhone(
+        data
+          .filter(c => c.phoneNumbers && c.phoneNumbers.length > 0)
+          .flatMap(c =>
+            (c.phoneNumbers || []).map(p => ({
+              name: c.name ?? '',
+              phoneNumber: normalizePhoneNumber(p.number || ''),
+              email: c.emails?.[0]?.email,
+              avatarUri: c.imageAvailable ? c.image?.uri : undefined,
+            }))
+          )
+      );
 
       if (formattedContacts.length === 0) {
         Alert.alert(t('common.error'), t('contacts.noValidContacts', 'No valid contacts found.'));
