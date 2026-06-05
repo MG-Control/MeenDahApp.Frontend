@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { I18nManager, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { changeLanguage } from '@/lib/i18n';
 import { ThemedView } from '@/components/themed-view';
@@ -11,43 +11,84 @@ export const LanguageSwitcher: React.FC = () => {
   const theme = useTheme();
 
   return (
-    <ThemedView type="backgroundElement" style={styles.container}>
-      <TouchableOpacity
-        onPress={() => changeLanguage('ar')}
-        style={[
-          styles.button,
-          language === 'ar' && { backgroundColor: theme.backgroundSelected },
-        ]}
-      >
-        <ThemedText
-          type={language === 'ar' ? 'smallBold' : 'small'}
-          themeColor={language === 'ar' ? 'text' : 'textSecondary'}
-        >
-          العربية
-        </ThemedText>
-      </TouchableOpacity>
+    <ThemedView 
+      type="backgroundElement" 
+      style={[
+        styles.container, 
+        { flexDirection: 'row' }
+      ]}
+    >
+      {I18nManager.isRTL ? (
+        <>
+          <TouchableOpacity
+            onPress={() => changeLanguage('ar')}
+            style={[
+              styles.button,
+              language === 'ar' && { backgroundColor: theme.backgroundSelected },
+            ]}
+          >
+            <ThemedText
+              type={language === 'ar' ? 'smallBold' : 'small'}
+              themeColor={language === 'ar' ? 'text' : 'textSecondary'}
+            >
+              العربية
+            </ThemedText>
+          </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => changeLanguage('en')}
-        style={[
-          styles.button,
-          language === 'en' && { backgroundColor: theme.backgroundSelected },
-        ]}
-      >
-        <ThemedText
-          type={language === 'en' ? 'smallBold' : 'small'}
-          themeColor={language === 'en' ? 'text' : 'textSecondary'}
-        >
-          English
-        </ThemedText>
-      </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => changeLanguage('en')}
+            style={[
+              styles.button,
+              language === 'en' && { backgroundColor: theme.backgroundSelected },
+            ]}
+          >
+            <ThemedText
+              type={language === 'en' ? 'smallBold' : 'small'}
+              themeColor={language === 'en' ? 'text' : 'textSecondary'}
+            >
+              English
+            </ThemedText>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <TouchableOpacity
+            onPress={() => changeLanguage('en')}
+            style={[
+              styles.button,
+              language === 'en' && { backgroundColor: theme.backgroundSelected },
+            ]}
+          >
+            <ThemedText
+              type={language === 'en' ? 'smallBold' : 'small'}
+              themeColor={language === 'en' ? 'text' : 'textSecondary'}
+            >
+              English
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => changeLanguage('ar')}
+            style={[
+              styles.button,
+              language === 'ar' && { backgroundColor: theme.backgroundSelected },
+            ]}
+          >
+            <ThemedText
+              type={language === 'ar' ? 'smallBold' : 'small'}
+              themeColor={language === 'ar' ? 'text' : 'textSecondary'}
+            >
+              العربية
+            </ThemedText>
+          </TouchableOpacity>
+        </>
+      )}
     </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     padding: 4,
     borderRadius: 12,
   },

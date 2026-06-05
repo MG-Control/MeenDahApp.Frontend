@@ -6,20 +6,35 @@ type SyncStorage = {
   removeItem: (name: string) => void;
 };
 
-const fallbackStorage = new Map<string, string>();
+const inMemoryStorage = new Map<string, string>();
+
+function createWebStorage(): SyncStorage {
+  if (typeof localStorage !== 'undefined') {
+    return {
+      setItem: (name, value) => localStorage.setItem(name, value),
+      getItem: (name) => localStorage.getItem(name),
+      removeItem: (name) => localStorage.removeItem(name),
+    };
+  }
+  return {
+    setItem: (name, value) => inMemoryStorage.set(name, value),
+    getItem: (name) => inMemoryStorage.get(name) ?? null,
+    removeItem: (name) => inMemoryStorage.delete(name),
+  };
+}
 
 function createFallbackStorage(): SyncStorage {
   return {
-    setItem: (name, value) => fallbackStorage.set(name, value),
-    getItem: (name) => fallbackStorage.get(name) ?? null,
-    removeItem: (name) => fallbackStorage.delete(name),
+    setItem: (name, value) => inMemoryStorage.set(name, value),
+    getItem: (name) => inMemoryStorage.get(name) ?? null,
+    removeItem: (name) => inMemoryStorage.delete(name),
   };
 }
 
 export function createMMKVStorage(id: string): SyncStorage {
-  // MMKV is not supported on Web
+  // MMKV is not supported on Web — use localStorage instead
   if (Platform.OS === 'web') {
-    return createFallbackStorage();
+    return createWebStorage();
   }
 
   try {
@@ -30,6 +45,7 @@ export function createMMKVStorage(id: string): SyncStorage {
     }
 
     const storage = new MMKV({ id });
+    const fallback = createFallbackStorage();
 
     return {
       setItem: (name: string, value: string) => {
@@ -37,7 +53,7 @@ export function createMMKVStorage(id: string): SyncStorage {
           storage.set(name, value);
         } catch (e) {
           console.warn('MMKV setItem failed:', e);
-          fallbackStorage.set(name, value);
+          fallback.setItem(name, value);
         }
       },
       getItem: (name: string) => {
@@ -45,7 +61,7 @@ export function createMMKVStorage(id: string): SyncStorage {
           return storage.getString(name) ?? null;
         } catch (e) {
           console.warn('MMKV getItem failed:', e);
-          return fallbackStorage.get(name) ?? null;
+          return fallback.getItem(name);
         }
       },
       removeItem: (name: string) => {
@@ -53,7 +69,7 @@ export function createMMKVStorage(id: string): SyncStorage {
           storage.delete(name);
         } catch (e) {
           console.warn('MMKV removeItem failed:', e);
-          fallbackStorage.delete(name);
+          fallback.removeItem(name);
         }
       },
     };

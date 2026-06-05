@@ -26,7 +26,6 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-google-signin/google-signin",
       [
         "expo-contacts",
         {
@@ -51,7 +50,10 @@
             "extraGradleArguments": [
               "-x",
               "lintVitalAnalyzeRelease"
-            ]
+            ],
+            "ndkVersion": "26.1.10909125",
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ]

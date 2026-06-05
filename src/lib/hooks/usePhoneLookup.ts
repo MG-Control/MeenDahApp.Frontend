@@ -1,31 +1,57 @@
 import apiClient from '@/lib/api/client';
-import { useQuery } from '@tanstack/react-query';
+import { encodePhoneForApi } from '@/lib/utils/phoneRoute';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+export interface TagEntry {
+  id: number;
+  text: string;
+  category: number;
+  createdAt: string;
+}
 
 export interface PhoneDetails {
   e164: string;
   displayName?: string;
   email?: string;
   avatarUrl?: string;
+  userId?: string | null;
+  gender?: string | null;
+  residence?: string | null;
+  country?: string | null;
+  birthplace?: string | null;
+  relationship?: string | null;
+  workplace?: string | null;
+  joined?: string | null;
+  birthdate?: string | null;
   spamScore: number;
-  topTags: {
-    id: number;
-    text: string;
-    category: number;
-    upvoteCount: number;
-    downvoteCount: number;
-    createdAt: string;
-  }[];
+  totalSearches: number;
+  lastActivityAt: string;
+  tags: TagEntry[];
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
+  telegramUrl?: string | null;
 }
 
-export const usePhoneLookup = (phoneNumber?: string) => {
+interface UsePhoneLookupOptions {
+  skipInitialFetch?: boolean;
+}
+
+export const usePhoneLookup = (phoneNumber?: string, options?: UsePhoneLookupOptions) => {
+  const queryClient = useQueryClient();
+  const cachedPhone = phoneNumber
+    ? queryClient.getQueryData<PhoneDetails>(['phone', phoneNumber])
+    : undefined;
+  const shouldSkipInitialFetch = Boolean(options?.skipInitialFetch && cachedPhone);
+
   return useQuery({
     queryKey: ['phone', phoneNumber],
     queryFn: async () => {
       if (!phoneNumber) return null;
-      const { data } = await apiClient.get<PhoneDetails>(`/phones/${phoneNumber}`);
-      // if (__DEV__) console.log('[API] Phone Details Response:', JSON.stringify(data, null, 2));
+      const { data } = await apiClient.get<PhoneDetails>(
+        `/phones/${encodePhoneForApi(phoneNumber)}`
+      );
       return data;
     },
-    enabled: !!phoneNumber,
+    enabled: !!phoneNumber && !shouldSkipInitialFetch,
   });
 };

@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
   const systemColorScheme = useColorScheme();
   const { theme } = useSettingsStore();
-  const { accessToken, setTokens, setUser } = useAuthStore();
+  const { accessToken, _hasHydrated, setTokens, setUser } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -23,17 +23,27 @@ export default function RootLayout() {
     : (theme === 'dark' ? DarkTheme : DefaultTheme);
 
   useEffect(() => {
-    // Redirect logic
-    const inAuthGroup = segments[0] === 'welcome';
+    console.log('[Layout] hydrated:', _hasHydrated, 'accessToken:', !!accessToken, 'segments:', segments);
+    if (!_hasHydrated) return;
+
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
 
     if (!accessToken && !inAuthGroup) {
-      // Redirect to welcome if not logged in
-      router.replace('/welcome');
+      router.replace('/login');
     } else if (accessToken && inAuthGroup) {
-      // Redirect to home if logged in and trying to access welcome
       router.replace('/');
     }
-  }, [accessToken, segments]);
+  }, [accessToken, segments, _hasHydrated]);
+
+  if (!_hasHydrated) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={currentTheme}>
+          <AnimatedSplashOverlay />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -41,13 +51,34 @@ export default function RootLayout() {
         <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+          <Stack.Screen
+            name="register"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
+          <Stack.Screen
+            name="contact-picker"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen 
             name="phone/[number]" 
             options={{ 
               headerShown: false,
               presentation: 'card'
             }} 
+          />
+          <Stack.Screen
+            name="tags"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+            }}
           />
         </Stack>
       </ThemeProvider>
