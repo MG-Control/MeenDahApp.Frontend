@@ -31,6 +31,7 @@ export const styles = StyleSheet.create({
     color: 'white',
     fontSize: 32,
     fontWeight: 'bold',
+    paddingBottom: 8,
   },
   profileButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -56,6 +57,10 @@ export const styles = StyleSheet.create({
       },
     }),
   },
+  searchIconButton: {
+    padding: 8,
+    borderRadius: 999,
+  },
   searchInput: {
     flex: 1,
     marginLeft: 12,
@@ -68,16 +73,17 @@ export const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   resultCard: {
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
   },
   resultInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 12,
   },
   resultName: {
     fontWeight: 'bold',
@@ -90,5 +96,51 @@ export const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     marginTop: 40,
+  },
+  recentCard: {
+    marginHorizontal: 10,
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  recentHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+  },
+  recentClearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  recentContainer: {
+    marginTop: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+  recentTitle: {
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  recentItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    marginBottom: 8,
+  },
+  recentDeleteButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
 });

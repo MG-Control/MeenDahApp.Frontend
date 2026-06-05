@@ -13,6 +13,8 @@
     "searchPlaceholder": "Search...",
     "logout": "Log Out",
     "unknownCaller": "Unknown Caller"
+  ,
+    "clear": "Clear"
   },
   "auth": {
     "welcome": "Welcome to Meen Dah",
@@ -21,6 +23,8 @@
     "verify": "Verify",
     "login": "Log In",
     "register": "Create Account",
+    "createAccount": "Create New Account",
+    "backToLogin": "Back to Login",
     "nameLabel": "Full Name",
     "namePlaceholder": "Enter your name",
     "identifierLabel": "Email or phone",
@@ -31,11 +35,12 @@
     "passwordPlaceholder": "Enter your password",
     "otpLabel": "OTP code",
     "otpPlaceholder": "Enter OTP code",
-    "loginButton": "Continue to the app",
-    "registerButton": "Create and continue",
+    "loginButton": "Sign In",
+    "registerButton": "Create Account",
+    "loginHint": "Use your email or mobile number and password.",
+    "registerHint": "Create a new account to continue.",
     "sendOtpButton": "Send OTP",
     "verifyOtpButton": "Verify OTP and continue",
-    "passwordHelper": "Enter your email or mobile number, then your password to continue.",
     "otpHelper": "OTP auth is active now. The current test code is 123456 until we wire real delivery.",
     "otpSent": "OTP has been generated successfully. Use the current test code to continue.",
     "nameValidation": "Please enter a valid name.",
@@ -43,8 +48,7 @@
     "passwordValidation": "Password must be at least 6 characters.",
     "otpValidation": "OTP code must be at least 6 digits.",
     "defaultUserName": "User",
-    "tagline": "Identify unknown calls and block spam with the power of community.",
-    "featureCallerId": "Identify unknown callers & see what tags people saved your number with, instantly and securely!"
+    "featureCallerId": "Identify unknown callers & see what tags people saved your number with"
   },
   "profile": {
     "title": "Profile",
@@ -129,7 +133,8 @@
     "imagesTitle": "Images",
     "imagesDesc": "For static images, you can use the @2x and @3x suffixes to provide files for different screen densities.",
     "minDigitsHint": "Enter at least 11 digits to search",
-    "noResults": "No results found for \"{{query}}\""
+    "noResults": "No results found for \"{{query}}\"",
+    "recentSearches": "Recent searches"
   },
   "home": {
     "dashboard": "Dashboard",

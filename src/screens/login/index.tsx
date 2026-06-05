@@ -19,33 +19,22 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { styles } from './styles';
 
-type AuthMode = 'login' | 'register';
-
 const DEFAULT_PHONE = '01205808516';
 const DEFAULT_PASSWORD = '01205808516';
 const IS_DEV = __DEV__;
 
-export default function WelcomeScreen() {
+export default function LoginScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const needsRTLFlip = isArabic !== I18nManager.isRTL;
   const theme = useTheme();
-  const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
-  const [displayName, setDisplayName] = useState('');
   const [identifier, setIdentifier] = useState(IS_DEV ? DEFAULT_PHONE : '');
   const [password, setPassword] = useState(IS_DEV ? DEFAULT_PASSWORD : '');
   const { setTokens, setUser } = useAuthStore();
 
   const normalizePhoneNumber = (value: string) => value.replace(/[^\d+]/g, '');
-
-  const applyDefaultValues = (nextMode: AuthMode) => {
-    setMode(nextMode);
-    setDisplayName('');
-    setIdentifier(IS_DEV && nextMode === 'login' ? DEFAULT_PHONE : '');
-    setPassword(IS_DEV && nextMode === 'login' ? DEFAULT_PASSWORD : '');
-  };
 
   const normalizeIdentifier = () => {
     const trimmedIdentifier = identifier.trim();
@@ -80,11 +69,6 @@ export default function WelcomeScreen() {
   };
 
   const validateForm = () => {
-    if (mode === 'register' && displayName.trim().length < 2) {
-      Alert.alert(t('common.error'), t('auth.nameValidation'));
-      return false;
-    }
-
     if (!normalizeIdentifier()) {
       return false;
     }
@@ -96,13 +80,6 @@ export default function WelcomeScreen() {
 
     return true;
   };
-
-  const resolveDisplayName = (normalizedIdentifier: string, isEmail: boolean) =>
-    mode === 'register'
-      ? displayName.trim()
-      : isEmail
-        ? normalizedIdentifier.split('@')[0] || t('auth.defaultUserName')
-        : t('auth.defaultUserName');
 
   const handleAuth = async () => {
     if (!validateForm()) {
@@ -117,20 +94,12 @@ export default function WelcomeScreen() {
     try {
       setLoading(true);
 
-      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register';
-      const payload =
-        mode === 'login'
-          ? {
-              identifier: normalized.normalizedIdentifier,
-              password,
-            }
-          : {
-              identifier: normalized.normalizedIdentifier,
-              displayName: resolveDisplayName(normalized.normalizedIdentifier, normalized.isEmail),
-              password,
-            };
+      const payload = {
+        identifier: normalized.normalizedIdentifier,
+        password,
+      };
 
-      const { data } = await apiClient.post(endpoint, payload);
+      const { data } = await apiClient.post('/auth/login', payload);
 
       setTokens(data.accessToken, data.refreshToken);
       setUser({ ...data.user, avatarUrl: data.user?.avatarUrl });
@@ -144,6 +113,10 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <View pointerEvents="none" style={styles.backdrop}>
+        <View style={styles.backdropGlowTop} />
+        <View style={styles.backdropGlowBottom} />
+      </View>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -166,52 +139,43 @@ export default function WelcomeScreen() {
               {t('common.appName')}
             </ThemedText>
             <View style={[styles.indicator, { backgroundColor: '#3c87f7' }]} />
-            <ThemedText style={styles.tagline} themeColor="textSecondary">
-              {t('auth.tagline')}
-            </ThemedText>
+            
+            <View style={[styles.features, needsRTLFlip && { alignItems: 'flex-end' }]}>
+              <View
+                style={[
+                  styles.featureRow,
+                  needsRTLFlip && { flexDirection: 'row-reverse' },
+                ]}
+              >
+                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
+                </View>
+                <ThemedText
+                  type="smallBold"
+                  style={[
+                    styles.featuresText,
+                    { textAlign: needsRTLFlip ? 'right' : 'left' },
+                  ]}
+                >
+                  {t('auth.featureCallerId')}
+                </ThemedText>
+              </View>
+            </View>
           </View>
 
           <View style={styles.actions}>
-            <View style={[styles.modeSwitcher, { backgroundColor: theme.backgroundElement }]}>
-              {(['login', 'register'] as AuthMode[]).map((item) => {
-                const active = mode === item;
-                return (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.modeButton, active && { backgroundColor: '#3c87f7' }]}
-                    onPress={() => applyDefaultValues(item)}
-                  >
-                    <ThemedText style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
-                      {item === 'login' ? t('auth.login') : t('auth.register')}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
             <View style={[styles.formCard, { backgroundColor: theme.backgroundElement }]}>
-              {mode === 'register' ? (
-                <View style={styles.inputGroup}>
-                  <ThemedText type="smallBold">{t('auth.nameLabel')}</ThemedText>
-                  <TextInput
-                    value={displayName}
-                    onChangeText={setDisplayName}
-                    placeholder={t('auth.namePlaceholder')}
-                    placeholderTextColor={theme.textSecondary}
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme.background,
-                        color: theme.text,
-                        textAlign: needsRTLFlip ? 'right' : 'left',
-                      },
-                    ]}
-                  />
-                </View>
-              ) : null}
+              <View style={styles.formHeader}>
+                <ThemedText type="title" style={styles.formTitle}>
+                  {t('auth.login')}
+                </ThemedText>
+                <ThemedText style={styles.formSubtitle} themeColor="textSecondary">
+                  {t('auth.loginHint')}
+                </ThemedText>
+              </View>
 
               <View style={styles.inputGroup}>
-                <ThemedText type="smallBold">{t('auth.identifierLabel')}</ThemedText>
+                <ThemedText type="smallBold" style={{textAlign: needsRTLFlip ? 'right' : 'left'}}>{t('auth.identifierLabel')}</ThemedText>
                 <View style={[styles.phoneRow, needsRTLFlip && { flexDirection: 'row-reverse' }] }>
                   <TextInput
                     value={identifier}
@@ -238,7 +202,7 @@ export default function WelcomeScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <ThemedText type="smallBold">{t('auth.passwordLabel')}</ThemedText>
+                <ThemedText type="smallBold" style={{textAlign: needsRTLFlip ? 'right' : 'left'}}>{t('auth.passwordLabel')}</ThemedText>
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
@@ -266,31 +230,22 @@ export default function WelcomeScreen() {
                 disabled={loading}
               >
                 <View style={styles.iconContainer}>
-                  <Ionicons name={mode === 'login' ? 'log-in-outline' : 'person-add-outline'} size={20} color="#3c87f7" />
+                  <Ionicons name="log-in-outline" size={20} color="#3c87f7" />
                 </View>
                 <ThemedText style={styles.signInText}>
-                  {loading
-                    ? t('common.loading')
-                    : mode === 'login'
-                      ? t('auth.loginButton')
-                      : t('auth.registerButton')}
+                  {loading ? t('common.loading') : t('auth.loginButton')}
                 </ThemedText>
               </TouchableOpacity>
 
-              <ThemedText style={styles.helperText} themeColor="textSecondary">
-                {t('auth.passwordHelper')}
-              </ThemedText>
+              <View style={[{ flexDirection: needsRTLFlip ? 'row-reverse' : 'row', gap: 4, alignItems: 'center', flexWrap: 'wrap' }]}>
+                <TouchableOpacity onPress={() => router.push('/register' as any)}>
+                  <ThemedText style={[styles.helperText, { color: '#3c87f7', textDecorationLine: 'underline' }]}>
+                    {t('auth.createAccount')}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={[styles.features, needsRTLFlip && { alignItems: 'flex-end' }]}>
-              <View style={[styles.featureRow, needsRTLFlip && { flexDirection: 'row-reverse' }]}>
-                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
-                  <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
-                </View>
-                <ThemedText type="smallBold">{t('auth.featureCallerId')}</ThemedText>
-              </View>
-              
-            </View>
           </View>
         </View>
       </ScrollView>

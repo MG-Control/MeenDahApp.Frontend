@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/stores/authStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, Switch, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,7 +22,7 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const router = useRouter();
-  const { user, logout, setUser } = useAuthStore();
+  const { user, accessToken, _hasHydrated, logout, setUser } = useAuthStore();
   const { theme: currentTheme, setTheme } = useSettingsStore();
   const [anonymous, setAnonymous] = useState(false);
   const { syncContacts, isSyncing } = useContactSync();
@@ -29,6 +30,11 @@ export default function ProfileScreen() {
   const [userTags, setUserTags] = useState<any[]>([]);
 
   const fetchUserTags = async () => {
+    if (!_hasHydrated || !accessToken) {
+      setUserTags([]);
+      return;
+    }
+
     try {
       const { data } = await apiClient.get('/auth/me/tags');
       setUserTags(data || []);
@@ -52,8 +58,13 @@ export default function ProfileScreen() {
   };
 
   React.useEffect(() => {
+    if (!_hasHydrated || !accessToken) {
+      setUserTags([]);
+      return;
+    }
+
     fetchUserTags();
-  }, []);
+  }, [_hasHydrated, accessToken]);
 
   return (
     <ThemedView style={styles.container}>
@@ -72,7 +83,10 @@ export default function ProfileScreen() {
           <ThemedText style={styles.userName}>{user?.displayName || 'User'}</ThemedText>
           <ThemedText style={styles.userEmail}>{user?.email || user?.phoneNumber}</ThemedText>
            
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => Alert.alert('Coming soon قريبا',"Coming soon قريبا")}
+          >
             <ThemedText style={styles.editButtonText}>{t('profile.edit')}</ThemedText>
           </TouchableOpacity>
         </View>

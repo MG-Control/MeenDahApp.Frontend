@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { createMMKVStorage } from './mmkvStorage';
+import { createSecureStorage } from './secureStorage';
 
 interface AuthState {
   accessToken: string | null;
@@ -31,10 +31,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => createMMKVStorage('auth-storage')),
+      storage: createJSONStorage(() => createSecureStorage('auth-storage')),
       onRehydrateStorage: () => (state, error) => {
         console.log('[Auth] Rehydrated:', { accessToken: state?.accessToken, error });
-        useAuthStore.setState({ _hasHydrated: true });
+        queueMicrotask(() => {
+          useAuthStore.setState({ _hasHydrated: true });
+        });
       },
     }
   )

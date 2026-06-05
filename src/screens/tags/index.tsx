@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, RefreshControl, ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/lib/stores/authStore';
 import { styles } from './styles';
 
 type UserTag = {
@@ -22,10 +23,16 @@ export default function TagsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
+  const { accessToken, _hasHydrated } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
   const [tags, setTags] = useState<UserTag[]>([]);
 
   const loadTags = async () => {
+    if (!_hasHydrated || !accessToken) {
+      setTags([]);
+      return;
+    }
+
     const { data } = await apiClient.get('/auth/me/tags');
     setTags(data || []);
   };
@@ -42,8 +49,13 @@ export default function TagsScreen() {
   };
 
   useEffect(() => {
+    if (!_hasHydrated || !accessToken) {
+      setTags([]);
+      return;
+    }
+
     void loadTags().catch((error) => console.warn('Failed to load tags', error));
-  }, []);
+  }, [_hasHydrated, accessToken]);
 
   const visibleTags = useMemo(() => tags.filter((tag) => !tag.isHidden), [tags]);
   const hiddenTags = useMemo(() => tags.filter((tag) => tag.isHidden), [tags]);

@@ -5,6 +5,27 @@ export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdropGlowTop: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 240,
+    height: 240,
+    borderRadius: 999,
+    backgroundColor: 'rgba(60, 135, 247, 0.10)',
+  },
+  backdropGlowBottom: {
+    position: 'absolute',
+    bottom: -120,
+    left: -90,
+    width: 260,
+    height: 260,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 118, 110, 0.08)',
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: Spacing.six,
@@ -16,16 +37,16 @@ export const styles = StyleSheet.create({
   container: {
     paddingTop: Spacing.two,
     paddingHorizontal: Spacing.five,
-    gap: Spacing.five,
+    gap: Spacing.four,
   },
-  branding: {
+  hero: {
     alignItems: 'center',
-    marginTop: Spacing.four,
+    gap: Spacing.two,
+    marginTop: Spacing.two,
   },
   logoContainer: {
     padding: Spacing.five,
     borderRadius: 40,
-    // marginBottom: Spacing.six,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -39,55 +60,34 @@ export const styles = StyleSheet.create({
     }),
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 48,
+    height: 48,
   },
   appName: {
     textAlign: 'center',
-    fontSize: 32,
+    fontSize: 30,
   },
-  indicator: {
-    height: 6,
-    width: 48,
-    borderRadius: 3,
-    marginTop: Spacing.two,
-  },
-  tagline: {
-    fontSize: 18,
+  subtitle: {
     textAlign: 'center',
-    marginTop: Spacing.four,
-    lineHeight: 24,
-    paddingHorizontal: Spacing.two,
-  },
-  actions: {
-    marginBottom: Spacing.four,
-    gap: Spacing.four,
-  },
-  modeSwitcher: {
-    borderRadius: 18,
-    padding: Spacing.one,
-    flexDirection: 'row',
-    gap: Spacing.one,
-  },
-  modeButton: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-  },
-  modeButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modeButtonTextActive: {
-    color: '#fff',
+    lineHeight: 20,
   },
   formCard: {
     borderRadius: 24,
     padding: Spacing.four,
     gap: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(60, 135, 247, 0.08)',
+  },
+  formHeader: {
+    gap: Spacing.one,
+  },
+  formTitle: {
+    fontSize: 22,
+    textAlign: 'center',
+  },
+  formSubtitle: {
+    textAlign: 'center',
+    lineHeight: 20,
   },
   inputGroup: {
     gap: Spacing.two,
@@ -117,21 +117,9 @@ export const styles = StyleSheet.create({
   phoneInput: {
     flex: 1,
   },
-  features: {
-    gap: Spacing.three,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  iconWrapper: {
-    padding: Spacing.two,
-    borderRadius: 8,
-  },
-  signInButton: {
-    height: 64,
-    borderRadius: 20,
+  primaryButton: {
+    minHeight: 60,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -148,33 +136,23 @@ export const styles = StyleSheet.create({
       },
     }),
   },
-  secondaryButton: {
-    minHeight: 54,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.two,
-    borderWidth: 1,
-    borderColor: '#0f766e',
-    backgroundColor: 'rgba(15, 118, 110, 0.08)',
-  },
-  secondaryButtonText: {
-    color: '#0f766e',
-    fontSize: 16,
-    fontWeight: '700',
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
   },
   iconContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     padding: 6,
     borderRadius: 8,
-  },
-  signInText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   helperText: {
     textAlign: 'center',
     lineHeight: 20,
+  },
+  backToLoginText: {
+    color: '#3c87f7',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

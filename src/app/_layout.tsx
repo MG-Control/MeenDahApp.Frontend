@@ -26,14 +26,24 @@ export default function RootLayout() {
     console.log('[Layout] hydrated:', _hasHydrated, 'accessToken:', !!accessToken, 'segments:', segments);
     if (!_hasHydrated) return;
 
-    const inAuthGroup = segments[0] === 'welcome';
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
 
     if (!accessToken && !inAuthGroup) {
-      router.replace('/welcome');
+      router.replace('/login');
     } else if (accessToken && inAuthGroup) {
       router.replace('/');
     }
   }, [accessToken, segments, _hasHydrated]);
+
+  if (!_hasHydrated) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={currentTheme}>
+          <AnimatedSplashOverlay />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -41,7 +51,14 @@ export default function RootLayout() {
         <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="welcome" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+          <Stack.Screen
+            name="register"
+            options={{
+              headerShown: false,
+              presentation: 'card',
+            }}
+          />
           <Stack.Screen
             name="contact-picker"
             options={{

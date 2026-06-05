@@ -159,6 +159,36 @@ export default function PhoneDetailScreen() {
     }
   };
 
+  const handleOpenFacebook = async (webUrl?: string | null) => {
+    if (!webUrl) return;
+    // Try to open in Facebook app first using facewebmodal which accepts a web URL
+    const appUrl = `fb://facewebmodal/f?href=${webUrl}`;
+    try {
+      const canOpenApp = await Linking.canOpenURL(appUrl);
+      if (canOpenApp) {
+        await Linking.openURL(appUrl);
+        return;
+      }
+
+      // Fallback: try generic fb:// scheme
+      const canOpenGeneric = await Linking.canOpenURL('fb://');
+      if (canOpenGeneric) {
+        await Linking.openURL('fb://');
+        return;
+      }
+
+      // Final fallback: open the web URL in the browser
+      const supported = await Linking.canOpenURL(webUrl);
+      if (supported) {
+        await Linking.openURL(webUrl);
+      } else {
+        Alert.alert(t('common.error'), t('phone.linkNotSupported'));
+      }
+    } catch (error) {
+      console.error('Error opening Facebook link:', error);
+    }
+  };
+
   const submitTag = async (category: number, text: string) => {
     if (!phoneNumber) return;
 
@@ -320,10 +350,14 @@ export default function PhoneDetailScreen() {
               <ThemedText style={styles.numberText}>{phoneNumber}</ThemedText>
 
               {displayData?.email ? (
-                <View style={styles.emailRow}>
+                <TouchableOpacity
+                  style={styles.emailRow}
+                  onPress={() => handleOpenLink(`mailto:${displayData.email}`)}
+                  activeOpacity={0.75}
+                >
                   <Ionicons name="mail-outline" size={14} color="rgba(255,255,255,0.85)" />
                   <ThemedText style={styles.emailText}>{displayData.email}</ThemedText>
-                </View>
+                </TouchableOpacity>
               ) : null}
 
               <View style={styles.actionRow}>
@@ -346,7 +380,7 @@ export default function PhoneDetailScreen() {
                   {displayData?.facebookUrl ? (
                     <TouchableOpacity
                       style={[styles.socialActionButton, { backgroundColor: '#1877f2' }]}
-                      onPress={() => handleOpenLink(displayData.facebookUrl)}
+                      onPress={() => handleOpenFacebook(displayData.facebookUrl)}
                     >
                       <Ionicons name="logo-facebook" size={18} color="white" />
                       <ThemedText style={styles.socialActionText}>{t('phone.facebook')}</ThemedText>
@@ -548,6 +582,7 @@ export default function PhoneDetailScreen() {
             <TouchableOpacity
               style={[styles.blockButton, { backgroundColor: '#ef444415', borderColor: '#ef444433' }]}
               activeOpacity={1}
+              onPress={() => Alert.alert('Coming soon قريبا',"Coming soon قريبا")}
             >
               <Ionicons name="ban" size={20} color="#ef4444" />
               <ThemedText style={styles.blockButtonText}>{t('phone.blockReport')}</ThemedText>

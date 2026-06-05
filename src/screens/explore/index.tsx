@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { PhoneDetails } from '@/lib/hooks/usePhoneLookup';
 import apiClient from '@/lib/api/client';
 import { encodePhoneForRoute } from '@/lib/utils/phoneRoute';
 import { styles } from './styles';
+import { createMMKVStorage } from '@/lib/stores/mmkvStorage';
 
 interface SearchResultItem {
   e164: string;
@@ -23,6 +24,7 @@ interface SearchResultItem {
   email?: string;
   avatarUrl?: string;
   spamScore?: number;
+  totalSearches?: number;
   tags?: string[];
   userId?: string | null;
   gender?: string | null;
@@ -46,6 +48,22 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
+  type RecentEntry = { query: string; item?: SearchResultItem };
+  const [recentSearches, setRecentSearches] = useState<RecentEntry[]>([]);
+  const RECENT_KEY = 'recent_searches_v1';
+  const storage = createMMKVStorage('meendah');
+
+  useEffect(() => {
+    try {
+      const raw = storage.getItem(RECENT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as RecentEntry[];
+        setRecentSearches(parsed);
+      }
+    } catch (e) {
+      console.warn('Failed to load recent searches', e);
+    }
+  }, []);
 
   const handleSearch = async (text: string) => {
     setQuery(text);
@@ -57,6 +75,20 @@ export default function SearchScreen() {
     try {
       const { data } = await apiClient.get(`/phones/search?q=${encodeURIComponent(text)}`);
       setResults(data);
+      // Save successful searches to recent list (keep unique, most recent first)
+      if (Array.isArray(data) && data.length > 0) {
+        const entry: RecentEntry = { query: text, item: data[0] };
+        setRecentSearches((prev) => {
+          const filtered = prev.filter((s) => s.query !== text);
+          const next = [entry, ...filtered].slice(0, 5);
+          try {
+            storage.setItem(RECENT_KEY, JSON.stringify(next));
+          } catch (e) {
+            try { storage.setItem(RECENT_KEY, JSON.stringify(next)); } catch (_) {}
+          }
+          return next;
+        });
+      }
     } catch (error) {
       console.error('Search error:', error);
     } finally {
@@ -83,7 +115,7 @@ export default function SearchScreen() {
           joined: item.joined,
           birthdate: item.birthdate,
           spamScore: item.spamScore ?? 0,
-          totalSearches: 0,
+          totalSearches: item.totalSearches ?? 0,
           lastActivityAt: new Date().toISOString(),
           tags: (item.tags ?? []).map((text, index) => ({
             id: -(index + 1),
@@ -150,7 +182,9 @@ export default function SearchScreen() {
             </View>
 
             <View style={styles.searchBar}>
-              <Ionicons name="search" size={22} color="#3c87f7" />
+              <TouchableOpacity onPress={() => handleSearch(query)} activeOpacity={0.75} style={styles.searchIconButton}>
+                <Ionicons name="search" size={22} color="#3c87f7" />
+              </TouchableOpacity>
               <TextInput
                 style={styles.searchInput}
                 placeholder={t('common.search')}
@@ -166,8 +200,69 @@ export default function SearchScreen() {
                 </TouchableOpacity>
               )}
             </View>
+
           </SafeAreaView>
+          
+           
         </View>
+
+ {/* Recent searches card */}
+            {recentSearches.length > 0 && query.length === 0 ? (
+              <ThemedView type="backgroundElement" style={[styles.recentCard, { borderColor: theme.backgroundSelected }]}> 
+                <View style={styles.recentHeaderRow}>
+                  <ThemedText type="smallBold" style={styles.recentTitle} themeColor="textSecondary">
+                    {t('explore.recentSearches')}
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={[styles.recentClearButton, { backgroundColor: theme.backgroundSelected }]}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      try { storage.removeItem(RECENT_KEY); } catch (e) {}
+                      setRecentSearches([]);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={theme.textSecondary} />
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {t('common.clear')}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.recentContainer}>
+                  {recentSearches.map((entry) => (
+                    <TouchableOpacity
+                      key={entry.query}
+                      activeOpacity={0.88}
+                      style={[styles.resultCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
+                      onPress={() => {
+                        setQuery(entry.query);
+                        handleSearch(entry.query);
+                      }}
+                    >
+                      <Avatar name={entry.item?.displayName || entry.query} url={entry.item?.avatarUrl} size={50} />
+                      <View style={styles.resultInfo}>
+                        <ThemedText type="default" style={styles.resultName}>{entry.item?.displayName || entry.query}</ThemedText>
+                        <ThemedText type="small" themeColor="textSecondary">{entry.item?.e164 || entry.query}</ThemedText>
+                        {entry.item?.email ? <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>{entry.item.email}</ThemedText> : null}
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.recentDeleteButton}
+                        hitSlop={10}
+                        onPress={(event) => {
+                          event.stopPropagation?.();
+                          const next = recentSearches.filter((s) => s.query !== entry.query);
+                          try { storage.setItem(RECENT_KEY, JSON.stringify(next)); } catch (e) {}
+                          setRecentSearches(next);
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ThemedView>
+            ) : null}
 
         {loading ? (
           <LoadingState />
