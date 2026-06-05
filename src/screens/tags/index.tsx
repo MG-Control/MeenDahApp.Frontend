@@ -97,7 +97,7 @@ export default function TagsScreen() {
       >
         <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={20} color="white" />
             <ThemedText style={styles.backButtonText}>{t('tags.back')}</ThemedText>
           </TouchableOpacity>
           <ThemedText style={styles.title}>{t('tags.title')}</ThemedText>

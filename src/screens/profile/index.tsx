@@ -82,7 +82,7 @@ export default function ProfileScreen() {
           />
           <ThemedText style={styles.userName}>{user?.displayName || 'User'}</ThemedText>
           <ThemedText style={styles.userEmail}>{user?.email || user?.phoneNumber}</ThemedText>
-           
+          
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => Alert.alert('Coming soon قريبا',"Coming soon قريبا")}
@@ -165,7 +165,7 @@ export default function ProfileScreen() {
           <ThemedView type="backgroundElement" style={styles.settingCard}>
             <View style={styles.settingInfo}>
               <View style={[styles.iconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                <Ionicons name="language" size={22} color="#3b82f6" />
+                <Ionicons name="language" size={22} color="#59130f6" />
               </View>
               <ThemedText type="default">{t('profile.language')}</ThemedText>
             </View>

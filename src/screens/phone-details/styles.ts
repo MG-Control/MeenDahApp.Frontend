@@ -283,7 +283,7 @@ export const styles = StyleSheet.create({
   tagItem: {
     flexBasis: '48%',
     maxWidth: '100%',
-    flexGrow: 1,
+    flexGrow: 0,
     flexShrink: 1,
     paddingHorizontal: 10,
     paddingVertical: 8,

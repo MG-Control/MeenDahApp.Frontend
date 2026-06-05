@@ -160,34 +160,20 @@ export default function PhoneDetailScreen() {
   };
 
   const handleOpenFacebook = async (webUrl?: string | null) => {
-    if (!webUrl) return;
-    // Try to open in Facebook app first using facewebmodal which accepts a web URL
-    const appUrl = `fb://facewebmodal/f?href=${webUrl}`;
+  if (!webUrl) return;
+
+  const appUrl = `fb://facewebmodal/f?href=${encodeURIComponent(webUrl)}`;
+
+  try {
+    await Linking.openURL(appUrl);
+  } catch {
     try {
-      const canOpenApp = await Linking.canOpenURL(appUrl);
-      if (canOpenApp) {
-        await Linking.openURL(appUrl);
-        return;
-      }
-
-      // Fallback: try generic fb:// scheme
-      const canOpenGeneric = await Linking.canOpenURL('fb://');
-      if (canOpenGeneric) {
-        await Linking.openURL('fb://');
-        return;
-      }
-
-      // Final fallback: open the web URL in the browser
-      const supported = await Linking.canOpenURL(webUrl);
-      if (supported) {
-        await Linking.openURL(webUrl);
-      } else {
-        Alert.alert(t('common.error'), t('phone.linkNotSupported'));
-      }
-    } catch (error) {
-      console.error('Error opening Facebook link:', error);
+      await Linking.openURL(webUrl);
+    } catch {
+      Alert.alert(t('common.error'), t('phone.linkNotSupported'));
     }
-  };
+  }
+};
 
   const submitTag = async (category: number, text: string) => {
     if (!phoneNumber) return;
@@ -496,12 +482,12 @@ export default function PhoneDetailScreen() {
 
             <View style={styles.tagsList}>
               {displayData?.tags && displayData.tags.length > 0 ? (
-                displayData.tags.map((tagEntry) => {
+                displayData.tags.map((tagEntry, index) => {
                   const tagColor = resolveTagColor(tagEntry);
 
                   return (
                     <ThemedView
-                      key={tagEntry.id}
+                      key={`${tagEntry.id}-${index}-${tagEntry.text}`}
                       type="backgroundElement"
                       style={[styles.tagItem, { borderColor: theme.backgroundSelected }]}
                     >
