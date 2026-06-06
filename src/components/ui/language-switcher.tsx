@@ -15,7 +15,7 @@ export const LanguageSwitcher: React.FC = () => {
       type="backgroundElement" 
       style={[
         styles.container, 
-        { flexDirection: 'row' }
+        { flexDirection: 'row'}
       ]}
     >
       {I18nManager.isRTL ? (
@@ -62,9 +62,7 @@ export const LanguageSwitcher: React.FC = () => {
             <ThemedText
               type={language === 'en' ? 'smallBold' : 'small'}
               themeColor={language === 'en' ? 'text' : 'textSecondary'}
-            >
-              English
-            </ThemedText>
+            >English</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -77,8 +75,7 @@ export const LanguageSwitcher: React.FC = () => {
             <ThemedText
               type={language === 'ar' ? 'smallBold' : 'small'}
               themeColor={language === 'ar' ? 'text' : 'textSecondary'}
-            >
-              العربية
+            >العربية
             </ThemedText>
           </TouchableOpacity>
         </>
@@ -91,6 +88,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 4,
     borderRadius: 12,
+    width: '50%',
   },
   button: {
     flex: 1,

@@ -30,6 +30,10 @@ export interface PhoneDetails {
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
   telegramUrl?: string | null;
+  viberUrl?: string | null;
+  signalUrl?: string | null;
+  skypeUrl?: string | null;
+  messengerUrl?: string | null;
 }
 
 interface UsePhoneLookupOptions {

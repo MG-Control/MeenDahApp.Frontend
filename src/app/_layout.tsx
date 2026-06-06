@@ -26,7 +26,9 @@ export default function RootLayout() {
     console.log('[Layout] hydrated:', _hasHydrated, 'accessToken:', !!accessToken, 'segments:', segments);
     if (!_hasHydrated) return;
 
-    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    // Get the first segment without the /index part
+    const firstSegment = segments[0]?.split('/')[0];
+    const inAuthGroup = firstSegment === 'login' || firstSegment === 'register';
 
     if (!accessToken && !inAuthGroup) {
       router.replace('/login');

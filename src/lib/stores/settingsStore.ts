@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { createMMKVStorage } from './mmkvStorage';
+import { settingsStorage } from './appStorage';
 
 interface SettingsState {
   language: 'ar' | 'en';
@@ -22,8 +22,8 @@ export const useSettingsStore = create<SettingsState>()(
       setHasSyncedContacts: (hasSyncedContacts) => set({ hasSyncedContacts }),
     }),
     {
-      name: 'settings-storage',
-      storage: createJSONStorage(() => createMMKVStorage('settings-storage')),
+      name: 'settings_storage', // Simple key
+      storage: createJSONStorage(() => settingsStorage),
     }
   )
 );

@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Avatar } from '@/components/ui/avatar';
@@ -16,7 +15,7 @@ import { PhoneDetails } from '@/lib/hooks/usePhoneLookup';
 import apiClient from '@/lib/api/client';
 import { encodePhoneForRoute } from '@/lib/utils/phoneRoute';
 import { styles } from './styles';
-import { createMMKVStorage } from '@/lib/stores/mmkvStorage';
+import { appStorage } from '@/lib/stores/appStorage';
 
 interface SearchResultItem {
   e164: string;
@@ -38,6 +37,10 @@ interface SearchResultItem {
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
   telegramUrl?: string | null;
+  viberUrl?: string | null;
+  signalUrl?: string | null;
+  skypeUrl?: string | null;
+  messengerUrl?: string | null;
 }
 
 export default function SearchScreen() {
@@ -50,30 +53,42 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
   type RecentEntry = { query: string; item?: SearchResultItem };
   const [recentSearches, setRecentSearches] = useState<RecentEntry[]>([]);
-  const RECENT_KEY = 'recent_searches_v1';
-  const storage = createMMKVStorage('meendah');
+  const RECENT_KEY = 'recent_searches';
 
   useEffect(() => {
-    try {
-      const raw = storage.getItem(RECENT_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as RecentEntry[];
-        setRecentSearches(parsed);
+    const loadRecentSearches = async () => {
+      try {
+        const raw = await appStorage.getItem(RECENT_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as RecentEntry[];
+          setRecentSearches(parsed);
+        }
+      } catch (e) {
+        console.warn('Failed to load recent searches', e);
       }
-    } catch (e) {
-      console.warn('Failed to load recent searches', e);
-    }
+    };
+    loadRecentSearches();
   }, []);
 
+  const saveRecentSearches = async (searches: RecentEntry[]) => {
+    try {
+      await appStorage.setItem(RECENT_KEY, JSON.stringify(searches));
+    } catch (e) {
+      console.warn('Failed to save recent searches', e);
+    }
+  };
+
   const handleSearch = async (text: string) => {
-    setQuery(text);
-    if (text.length < 11) {
+    // Only keep digits
+    const digitsOnly = text.replace(/\D/g, '');
+    setQuery(digitsOnly);
+    if (digitsOnly.length < 11) {
       setResults([]);
       return;
     }
     setLoading(true);
     try {
-      const { data } = await apiClient.get(`/phones/search?q=${encodeURIComponent(text)}`);
+      const { data } = await apiClient.get(`/phones/search?q=${encodeURIComponent(digitsOnly)}`);
       setResults(data);
       // Save successful searches to recent list (keep unique, most recent first)
       if (Array.isArray(data) && data.length > 0) {
@@ -81,11 +96,7 @@ export default function SearchScreen() {
         setRecentSearches((prev) => {
           const filtered = prev.filter((s) => s.query !== text);
           const next = [entry, ...filtered].slice(0, 5);
-          try {
-            storage.setItem(RECENT_KEY, JSON.stringify(next));
-          } catch (e) {
-            try { storage.setItem(RECENT_KEY, JSON.stringify(next)); } catch (_) {}
-          }
+          saveRecentSearches(next);
           return next;
         });
       }
@@ -126,6 +137,9 @@ export default function SearchScreen() {
           facebookUrl: item.facebookUrl,
           whatsappUrl: item.whatsappUrl,
           telegramUrl: item.telegramUrl,
+          viberUrl: item.viberUrl,
+          signalUrl: item.signalUrl,
+          skypeUrl: item.skypeUrl,
         };
 
         queryClient.setQueryData(['phone', item.e164], cachedPhone);
@@ -216,8 +230,8 @@ export default function SearchScreen() {
                   <TouchableOpacity
                     style={[styles.recentClearButton, { backgroundColor: theme.backgroundSelected }]}
                     activeOpacity={0.85}
-                    onPress={() => {
-                      try { storage.removeItem(RECENT_KEY); } catch (e) {}
+                    onPress={async () => {
+                      try { await appStorage.removeItem(RECENT_KEY); } catch (e) {}
                       setRecentSearches([]);
                     }}
                   >
@@ -249,10 +263,10 @@ export default function SearchScreen() {
                       <TouchableOpacity
                         style={styles.recentDeleteButton}
                         hitSlop={10}
-                        onPress={(event) => {
+                        onPress={async (event) => {
                           event.stopPropagation?.();
                           const next = recentSearches.filter((s) => s.query !== entry.query);
-                          try { storage.setItem(RECENT_KEY, JSON.stringify(next)); } catch (e) {}
+                          try { await saveRecentSearches(next); } catch (e) {}
                           setRecentSearches(next);
                         }}
                       >
