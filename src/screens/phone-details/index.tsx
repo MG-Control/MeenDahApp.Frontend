@@ -160,20 +160,20 @@ export default function PhoneDetailScreen() {
   };
 
   const handleOpenFacebook = async (webUrl?: string | null) => {
-  if (!webUrl) return;
+    if (!webUrl) return;
 
-  const appUrl = `fb://facewebmodal/f?href=${encodeURIComponent(webUrl)}`;
+    const appUrl = `fb://facewebmodal/f?href=${encodeURIComponent(webUrl)}`;
 
-  try {
-    await Linking.openURL(appUrl);
-  } catch {
     try {
-      await Linking.openURL(webUrl);
+      await Linking.openURL(appUrl);
     } catch {
-      Alert.alert(t('common.error'), t('phone.linkNotSupported'));
+      try {
+        await Linking.openURL(webUrl);
+      } catch {
+        Alert.alert(t('common.error'), t('phone.linkNotSupported'));
+      }
     }
-  }
-};
+  };
 
   const submitTag = async (category: number, text: string) => {
     if (!phoneNumber) return;
@@ -361,7 +361,7 @@ export default function PhoneDetailScreen() {
                 </TouchableOpacity>
               </View>
 
-              {(displayData?.facebookUrl || displayData?.whatsappUrl || displayData?.telegramUrl) && (
+              {(displayData?.facebookUrl || displayData?.whatsappUrl || displayData?.telegramUrl || displayData?.viberUrl || displayData?.signalUrl || displayData?.skypeUrl || displayData?.messengerUrl) && (
                 <View style={styles.socialActionRow}>
                   {displayData?.facebookUrl ? (
                     <TouchableOpacity
@@ -370,6 +370,16 @@ export default function PhoneDetailScreen() {
                     >
                       <Ionicons name="logo-facebook" size={18} color="white" />
                       <ThemedText style={styles.socialActionText}>{t('phone.facebook')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {displayData?.messengerUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#0084ff' }]}
+                      onPress={() => handleOpenLink(displayData.messengerUrl)}
+                    >
+                      <Ionicons name="chatbubble-outline" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.messenger')}</ThemedText>
                     </TouchableOpacity>
                   ) : null}
 
@@ -390,6 +400,36 @@ export default function PhoneDetailScreen() {
                     >
                       <Ionicons name="paper-plane" size={18} color="white" />
                       <ThemedText style={styles.socialActionText}>{t('phone.telegram')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {displayData?.viberUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#7360f2' }]}
+                      onPress={() => handleOpenLink(displayData.viberUrl)}
+                    >
+                      <Ionicons name="chatbubble-ellipses-outline" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.viber')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {displayData?.signalUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#3a76f0' }]}
+                      onPress={() => handleOpenLink(displayData.signalUrl)}
+                    >
+                      <Ionicons name="shield-outline" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.signal')}</ThemedText>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {displayData?.skypeUrl ? (
+                    <TouchableOpacity
+                      style={[styles.socialActionButton, { backgroundColor: '#00aff0' }]}
+                      onPress={() => handleOpenLink(displayData.skypeUrl)}
+                    >
+                      <Ionicons name="call-outline" size={18} color="white" />
+                      <ThemedText style={styles.socialActionText}>{t('phone.skype')}</ThemedText>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -568,7 +608,7 @@ export default function PhoneDetailScreen() {
             <TouchableOpacity
               style={[styles.blockButton, { backgroundColor: '#ef444415', borderColor: '#ef444433' }]}
               activeOpacity={1}
-              onPress={() => Alert.alert('Coming soon قريبا',"Coming soon قريبا")}
+              onPress={() => Alert.alert('Coming soon قريبا', "Coming soon قريبا")}
             >
               <Ionicons name="ban" size={20} color="#ef4444" />
               <ThemedText style={styles.blockButtonText}>{t('phone.blockReport')}</ThemedText>

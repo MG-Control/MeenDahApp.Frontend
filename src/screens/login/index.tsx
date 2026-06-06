@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { useTheme } from '@/hooks/use-theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import apiClient from '@/lib/api/client';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,16 @@ export default function LoginScreen() {
   const isArabic = i18n.language === 'ar';
   const needsRTLFlip = isArabic !== I18nManager.isRTL;
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  
+  const getLogoSource = () => {
+    const language = isArabic ? 'arabic' : 'english';
+    const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+    if (language === 'arabic' && scheme === 'dark') return require('@/assets/images/logo/meendah_arabic_dark.png');
+    if (language === 'arabic' && scheme === 'light') return require('@/assets/images/logo/meendah_arabic_light.png');
+    if (language === 'english' && scheme === 'dark') return require('@/assets/images/logo/meendah_english_dark.png');
+    return require('@/assets/images/logo/meendah_english_light.png');
+  };
   const [loading, setLoading] = useState(false);
   const [identifier, setIdentifier] = useState(IS_DEV ? DEFAULT_PHONE : '');
   const [password, setPassword] = useState(IS_DEV ? DEFAULT_PASSWORD : '');
@@ -130,7 +141,7 @@ export default function LoginScreen() {
           <View style={styles.branding}>
             <View style={[styles.logoContainer, { backgroundColor: theme.backgroundElement }]}>
               <Image
-                source={require('@/assets/images/expo-logo.png')}
+                source={getLogoSource()}
                 style={styles.logo}
                 resizeMode="contain"
               />

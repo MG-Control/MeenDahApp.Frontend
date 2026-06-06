@@ -1,7 +1,7 @@
 {
   "name": "meendah",
   "main": "expo-router/entry",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "forward:android": "adb forward tcp:5554 tcp:5555",
     "start": "expo start",

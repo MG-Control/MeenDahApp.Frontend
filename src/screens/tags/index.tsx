@@ -81,6 +81,7 @@ export default function TagsScreen() {
               );
             } catch (error) {
               console.warn('Toggle tag failed', error);
+              Alert.alert(t('common.error'), 'لا يمكنك تعديل هذا التاغ لأنه لم تقم بإنشائه');
             }
           },
         },
