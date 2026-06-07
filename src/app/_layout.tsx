@@ -27,8 +27,7 @@ export default function RootLayout() {
     if (!_hasHydrated) return;
 
     // Get the first segment without the /index part
-    const firstSegment = segments[0]?.split('/')[0];
-    const inAuthGroup = firstSegment === 'login' || firstSegment === 'register';
+    const inAuthGroup = segments[0] === '(auth)';
 
     if (!accessToken && !inAuthGroup) {
       router.replace('/login');
@@ -53,14 +52,7 @@ export default function RootLayout() {
         <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="login" options={{ gestureEnabled: false }} />
-          <Stack.Screen
-            name="register"
-            options={{
-              headerShown: false,
-              presentation: 'card',
-            }}
-          />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen
             name="contact-picker"
             options={{

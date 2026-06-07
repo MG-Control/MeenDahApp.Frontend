@@ -1,7 +1,7 @@
 import { Spacing } from '@/constants/theme';
 import { Platform, StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+export const sharedStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
@@ -39,11 +39,6 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.five,
     gap: Spacing.four,
   },
-  hero: {
-    alignItems: 'center',
-    gap: Spacing.two,
-    marginTop: Spacing.two,
-  },
   logoContainer: {
     padding: Spacing.five,
     borderRadius: 40,
@@ -62,32 +57,6 @@ export const styles = StyleSheet.create({
   logo: {
     width: 48,
     height: 48,
-  },
-  appName: {
-    textAlign: 'center',
-    fontSize: 30,
-  },
-  subtitle: {
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  formCard: {
-    borderRadius: 24,
-    padding: Spacing.four,
-    gap: Spacing.three,
-    borderWidth: 1,
-    borderColor: 'rgba(60, 135, 247, 0.08)',
-  },
-  formHeader: {
-    gap: Spacing.one,
-  },
-  formTitle: {
-    fontSize: 22,
-    textAlign: 'center',
-  },
-  formSubtitle: {
-    textAlign: 'center',
-    lineHeight: 20,
   },
   inputGroup: {
     gap: Spacing.two,
@@ -117,6 +86,35 @@ export const styles = StyleSheet.create({
   phoneInput: {
     flex: 1,
   },
+  iconWrapper: {
+    flexShrink: 0,
+    padding: Spacing.two,
+    borderRadius: 8,
+  },
+  iconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: 6,
+    borderRadius: 8,
+  },
+  formCard: {
+    borderRadius: 24,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    borderWidth: 1,
+    borderColor: 'rgba(60, 135, 247, 0.08)',
+  },
+  formHeader: {
+    gap: Spacing.one,
+    marginBottom: Spacing.one,
+  },
+  formTitle: {
+    fontSize: 22,
+    textAlign: 'center',
+  },
+  formSubtitle: {
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   primaryButton: {
     minHeight: 60,
     borderRadius: 18,
@@ -141,18 +139,8 @@ export const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
   },
-  iconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 6,
-    borderRadius: 8,
-  },
   helperText: {
     textAlign: 'center',
     lineHeight: 20,
-  },
-  backToLoginText: {
-    color: '#3c87f7',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
