@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, I18nManager, Image, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, I18nManager, Image, Linking, TextInput, TouchableOpacity, View } from 'react-native';
 import { AuthScreen } from '../auth-screen';
 import { sharedStyles } from '../styles';
 import { loginStyles } from './styles';
@@ -15,6 +15,7 @@ import { loginStyles } from './styles';
 const DEFAULT_PHONE = '01205808516';
 const DEFAULT_PASSWORD = '01205808516';
 const IS_DEV = __DEV__;
+const SUPPORT_FACEBOOK_URL = 'https://www.facebook.com/mgcontrolcom';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -83,6 +84,13 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenFacebook = () => {
+    if (!SUPPORT_FACEBOOK_URL) return;
+    Linking.openURL(SUPPORT_FACEBOOK_URL).catch(() =>
+      Alert.alert(t('common.error'), t('phone.linkNotSupported'))
+    );
   };
 
   return (
@@ -185,7 +193,7 @@ export default function LoginScreen() {
               {t('auth.createAccount')}
             </ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/forgot-password' as any)}>
+          <TouchableOpacity onPress={handleOpenFacebook}>
             <ThemedText style={[sharedStyles.helperText, { color: theme.textSecondary, textDecorationLine: 'underline' }]}>
               {t('auth.forgotPassword')}
             </ThemedText>

@@ -12,7 +12,13 @@
     "search": "Search",
     "searchPlaceholder": "Search...",
     "logout": "Log Out",
-    "unknownCaller": "Unknown Caller"
+    "unknownCaller": "Unknown Caller",
+    "callOverlayPermTitle": "Incoming call info",
+    "callOverlayPermMessage": "Meendah needs phone access to show caller information when you receive a call.",
+    "callLogPermTitle": "Call log access",
+    "callLogPermMessage": "Meendah needs call log access to identify the caller's number on Android 10+.",
+    "allow": "Allow",
+    "notNow": "Not now"
   ,
     "clear": "Clear"
   },

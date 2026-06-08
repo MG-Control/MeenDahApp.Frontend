@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import '@/lib/i18n';
+import { useCallOverlay } from '@/lib/hooks/useCallOverlay';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 
@@ -18,7 +19,9 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
 
-  const currentTheme = theme === 'system' 
+  useCallOverlay();
+
+  const currentTheme = theme === 'system'
     ? (systemColorScheme === 'dark' ? DarkTheme : DefaultTheme)
     : (theme === 'dark' ? DarkTheme : DefaultTheme);
 
