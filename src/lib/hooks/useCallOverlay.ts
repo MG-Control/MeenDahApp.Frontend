@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { AppState, PermissionsAndroid, Platform } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { PermissionsAndroid, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { callDetection } from '@/lib/native/callDetection';
 import { useAuthStore } from '@/lib/stores/authStore';
@@ -14,84 +14,72 @@ export function useCallOverlay() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const { t } = useTranslation();
+  const permissionsRequested = useRef(false);
 
-  // Push base URL once on mount
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     callDetection.setApiBaseUrl(BASE_URL.replace(/\/+$/, ''));
   }, []);
 
-  // Sync token to native storage whenever it changes
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     if (accessToken) {
       callDetection.setAuthToken(accessToken);
     } else {
       callDetection.clearAuthToken();
+      permissionsRequested.current = false;
     }
   }, [accessToken]);
 
-  // Check & request missing permissions on every app foreground — only when logged in
+  // Request permissions once per session after login — no AppState loop
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     if (!_hasHydrated || !accessToken) return;
+    if (permissionsRequested.current) return;
 
-    const strings = buildStrings(t);
-
-    // Check immediately when hook mounts (app open)
-    ensurePermissions(strings);
-
-    // Re-check when user returns from background (e.g. after granting overlay permission
-    // in Settings and coming back)
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') ensurePermissions(strings);
+    permissionsRequested.current = true;
+    ensurePermissions({
+      phoneStateTitle: t('common.callOverlayPermTitle'),
+      phoneStateMessage: t('common.callOverlayPermMessage'),
+      callLogTitle: t('common.callLogPermTitle'),
+      callLogMessage: t('common.callLogPermMessage'),
+      allow: t('common.allow'),
+      notNow: t('common.notNow'),
     });
-
-    return () => sub.remove();
   }, [_hasHydrated, accessToken]);
 }
 
-function buildStrings(t: (key: string) => string) {
-  return {
-    phoneStateTitle: t('common.callOverlayPermTitle'),
-    phoneStateMessage: t('common.callOverlayPermMessage'),
-    callLogTitle: t('common.callLogPermTitle'),
-    callLogMessage: t('common.callLogPermMessage'),
-    allow: t('common.allow'),
-    notNow: t('common.notNow'),
-  };
+interface Strings {
+  phoneStateTitle: string;
+  phoneStateMessage: string;
+  callLogTitle: string;
+  callLogMessage: string;
+  allow: string;
+  notNow: string;
 }
 
-async function ensurePermissions(strings: ReturnType<typeof buildStrings>) {
+async function ensurePermissions(s: Strings) {
   try {
-    const phoneStateStatus = await PermissionsAndroid.check(
+    const hasPhoneState = await PermissionsAndroid.check(
       PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE
     );
-    if (!phoneStateStatus) {
+    if (!hasPhoneState) {
       const result = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
-        {
-          title: strings.phoneStateTitle,
-          message: strings.phoneStateMessage,
-          buttonPositive: strings.allow,
-          buttonNegative: strings.notNow,
-        }
+        { title: s.phoneStateTitle, message: s.phoneStateMessage,
+          buttonPositive: s.allow, buttonNegative: s.notNow }
       );
       if (result !== PermissionsAndroid.RESULTS.GRANTED) return;
     }
 
-    const callLogStatus = await PermissionsAndroid.check(
+    const hasCallLog = await PermissionsAndroid.check(
       PermissionsAndroid.PERMISSIONS.READ_CALL_LOG
     );
-    if (!callLogStatus) {
+    if (!hasCallLog) {
       await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-        {
-          title: strings.callLogTitle,
-          message: strings.callLogMessage,
-          buttonPositive: strings.allow,
-          buttonNegative: strings.notNow,
-        }
+        { title: s.callLogTitle, message: s.callLogMessage,
+          buttonPositive: s.allow, buttonNegative: s.notNow }
       );
     }
 
