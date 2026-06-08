@@ -19,6 +19,12 @@ i18n.use(initReactI18next).init({
   },
 });
 
+useSettingsStore.subscribe((state) => {
+  if (i18n.language !== state.language) {
+    i18n.changeLanguage(state.language);
+  }
+});
+
 export const changeLanguage = async (lng: 'ar' | 'en') => {
   await i18n.changeLanguage(lng);
   useSettingsStore.getState().setLanguage(lng);

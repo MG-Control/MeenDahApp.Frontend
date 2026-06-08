@@ -48,7 +48,18 @@
     "passwordValidation": "Password must be at least 6 characters.",
     "otpValidation": "OTP code must be at least 6 digits.",
     "defaultUserName": "User",
-    "featureCallerId": "Identify unknown callers & see what tags people saved your number with"
+    "featureCallerId": "Identify unknown callers & see what tags people saved your number with",
+    "forgotPassword": "Forgot Password?",
+    "forgotPasswordTitle": "Forgot Password",
+    "forgotPasswordHint": "Enter your email or phone number and we'll help you recover your account.",
+    "sendResetLink": "Send Reset Link",
+    "emailSentTitle": "Check Your Email",
+    "emailSentDesc": "We sent a password reset link to {{email}}. Check your inbox and follow the instructions.",
+    "phoneSupportTitle": "Contact Support",
+    "phoneSupportDesc": "SMS password recovery is not available yet. Please contact our support team on Facebook and they will help you reset your password.",
+    "contactSupportFacebook": "Contact Support on Facebook",
+    "tryDifferentMethod": "Try a different method",
+    "backToLogin": "Back to Login"
   },
   "profile": {
     "title": "Profile",
