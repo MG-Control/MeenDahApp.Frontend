@@ -12,7 +12,13 @@
     "search": "بحث",
     "searchPlaceholder": "بحث...",
     "logout": "تسجيل الخروج",
-    "unknownCaller": "متصل مجهول"
+    "unknownCaller": "متصل مجهول",
+    "callOverlayPermTitle": "معلومات المتصل",
+    "callOverlayPermMessage": "مين ده يحتاج الوصول للهاتف لعرض معلومات المتصل عند استقبال المكالمات.",
+    "callLogPermTitle": "سجل المكالمات",
+    "callLogPermMessage": "مين ده يحتاج سجل المكالمات لمعرفة رقم المتصل على أندرويد 10 وما فوق.",
+    "allow": "السماح",
+    "notNow": "ليس الآن"
   ,
     "clear": "مسح"
   },
