@@ -10,7 +10,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#208AEF",
-        "foregroundImage": "./assets/images/logo/meendah_english_light.png"
+        "foregroundImage": "./assets/images/logo/meendah_english_light_adaptive.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.meendah.app"
