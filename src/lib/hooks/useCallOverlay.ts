@@ -16,11 +16,13 @@ export function useCallOverlay() {
   const { t } = useTranslation();
   const permissionsRequested = useRef(false);
 
+  // Set API base URL once
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     callDetection.setApiBaseUrl(BASE_URL.replace(/\/+$/, ''));
   }, []);
 
+  // Sync auth token
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     if (accessToken) {
@@ -31,7 +33,7 @@ export function useCallOverlay() {
     }
   }, [accessToken]);
 
-  // Request permissions once per session after login — no AppState loop
+  // Request permissions once per session after login
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     if (!_hasHydrated || !accessToken) return;
@@ -60,29 +62,25 @@ interface Strings {
 
 async function ensurePermissions(s: Strings) {
   try {
-    const hasPhoneState = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE
+    // 1. READ_PHONE_STATE — required on all Android versions
+    const phoneStateGranted = await requestIfNeeded(
+      PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+      { title: s.phoneStateTitle, message: s.phoneStateMessage,
+        buttonPositive: s.allow, buttonNegative: s.notNow }
     );
-    if (!hasPhoneState) {
-      const result = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
-        { title: s.phoneStateTitle, message: s.phoneStateMessage,
-          buttonPositive: s.allow, buttonNegative: s.notNow }
-      );
-      if (result !== PermissionsAndroid.RESULTS.GRANTED) return;
+    if (!phoneStateGranted) {
+      if (__DEV__) console.warn('[CallOverlay] READ_PHONE_STATE denied — call detection disabled');
+      return;
     }
 
-    const hasCallLog = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.READ_CALL_LOG
+    // 2. READ_CALL_LOG — needed on Android 9+ to get the incoming number
+    await requestIfNeeded(
+      PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
+      { title: s.callLogTitle, message: s.callLogMessage,
+        buttonPositive: s.allow, buttonNegative: s.notNow }
     );
-    if (!hasCallLog) {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-        { title: s.callLogTitle, message: s.callLogMessage,
-          buttonPositive: s.allow, buttonNegative: s.notNow }
-      );
-    }
 
+    // 3. SYSTEM_ALERT_WINDOW (overlay) — must be granted via Settings on Android 6+
     const hasOverlay = await callDetection.hasOverlayPermission();
     if (!hasOverlay) {
       callDetection.requestOverlayPermission();
@@ -90,4 +88,14 @@ async function ensurePermissions(s: Strings) {
   } catch (e) {
     if (__DEV__) console.warn('[CallOverlay] Permission check failed:', e);
   }
+}
+
+async function requestIfNeeded(
+  permission: (typeof PermissionsAndroid.PERMISSIONS)[keyof typeof PermissionsAndroid.PERMISSIONS],
+  rationale: { title: string; message: string; buttonPositive: string; buttonNegative: string }
+): Promise<boolean> {
+  const already = await PermissionsAndroid.check(permission);
+  if (already) return true;
+  const result = await PermissionsAndroid.request(permission, rationale);
+  return result === PermissionsAndroid.RESULTS.GRANTED;
 }
