@@ -36,7 +36,7 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun requestOverlayPermission() {
-        val activity = currentActivity ?: return
+        val activity = reactApplicationContext.currentActivity ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             !Settings.canDrawOverlays(activity)
         ) {
