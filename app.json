@@ -21,6 +21,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withCallDetection",
       [
         "expo-contacts",
         {
