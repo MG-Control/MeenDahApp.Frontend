@@ -33,6 +33,13 @@ class CallOverlayService : Service() {
         const val PREF_BASE_URL = "base_url"
     }
 
+    // Brand colors
+    private val BRAND_COLOR = Color.parseColor("#208AEF")
+    private val BG_DARK = Color.parseColor("#1C1C2E")
+    private val TEXT_MUTED = Color.parseColor("#8E8E98")
+    private val TEXT_WHITE = Color.WHITE
+    private val DIVIDER_COLOR = Color.parseColor("#2E2E4A")
+
     private var windowManager: WindowManager? = null
     private var overlayView: android.view.View? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -51,7 +58,7 @@ class CallOverlayService : Service() {
         when (intent?.action) {
             ACTION_SHOW -> {
                 val number = intent.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
-                Log.d(TAG, "ACTION_SHOW number=$number")
+                Log.d(TAG, "ACTION_SHOW number=[$number]")
                 startAsForeground(number)
                 if (canDrawOverlays()) showOverlay(number)
                 else Log.w(TAG, "No SYSTEM_ALERT_WINDOW permission")
@@ -87,16 +94,25 @@ class CallOverlayService : Service() {
         if (overlayView != null) { Log.d(TAG, "overlay already showing"); return }
         val view = buildOverlayView(phoneNumber)
         overlayView = view
+
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
+
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             type,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.TOP; y = dp(48) }
+        ).apply {
+            gravity = Gravity.TOP
+            y = dp(48)
+        }
+
         try {
             windowManager?.addView(view, params)
             Log.d(TAG, "Overlay added OK")
@@ -104,61 +120,294 @@ class CallOverlayService : Service() {
             Log.e(TAG, "addView FAILED: ${e.message}", e)
             overlayView = null
         }
-        if (phoneNumber.isNotEmpty()) fetchPhoneDetails(phoneNumber)
+
+        // Always fetch details, even for empty numbers
+        if (phoneNumber.isNotEmpty()) {
+            fetchPhoneDetails(phoneNumber)
+        }
     }
 
     private fun buildOverlayView(phoneNumber: String): LinearLayout {
-        val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(6), dp(12), dp(6)) }
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(14), dp(16), dp(14))
-            elevation = 10f * resources.displayMetrics.density
-            background = GradientDrawable().apply { setColor(Color.parseColor("#1C1C2E")); cornerRadius = dp(16).toFloat() }
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(6), dp(12), dp(6))
         }
-        val headerRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+            elevation = 12f * resources.displayMetrics.density
+            background = GradientDrawable().apply {
+                setColor(BG_DARK)
+                cornerRadius = dp(20).toFloat()
+            }
+        }
+
+        // ── Header row: brand + dismiss ──
+        val headerRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
         val brandLabel = TextView(this).apply {
-            text = "Meendah"; setTextColor(Color.parseColor("#208AEF"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            text = "Meendah"
+            setTextColor(BRAND_COLOR)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
+
         val dismissBtn = TextView(this).apply {
-            text = "  X  "; setTextColor(Color.parseColor("#AAAACC"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            text = "✕"
+            setTextColor(TEXT_MUTED)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setPadding(dp(6), dp(2), dp(6), dp(2))
             setOnClickListener { dismissOverlay(); stopSelf() }
         }
-        headerRow.addView(brandLabel); headerRow.addView(dismissBtn)
+        headerRow.addView(brandLabel)
+        headerRow.addView(dismissBtn)
+
         val divider = android.view.View(this).apply {
-            setBackgroundColor(Color.parseColor("#2E2E4A"))
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)).apply { topMargin = dp(8); bottomMargin = dp(10) }
+            setBackgroundColor(DIVIDER_COLOR)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
+            ).apply { topMargin = dp(10); bottomMargin = dp(12) }
         }
+
+        // ── Phone avatar / icon ──
+        val avatarContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = dp(12) }
+        }
+
+        // Circular avatar with phone icon
+        val avatarCircle = createAvatarCircle()
+        avatarContainer.addView(avatarCircle)
+
+        // Phone number and name column
+        val infoColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply { marginStart = dp(14) }
+        }
+
         val phoneLabel = TextView(this).apply {
-            text = if (phoneNumber.isEmpty()) "Unknown number" else phoneNumber
-            setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            text = if (phoneNumber.isEmpty()) {
+                "Incoming call"
+            } else {
+                formatPhoneNumber(phoneNumber)
+            }
+            setTextColor(TEXT_WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
+
         val nameLabel = TextView(this).apply {
-            text = if (phoneNumber.isEmpty()) "No number available" else "Searching..."
-            setTextColor(Color.parseColor("#AAAACC")); setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); tag = "name_label"
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) }
+            text = if (phoneNumber.isEmpty()) {
+                "No caller ID available"
+            } else {
+                "Searching..."
+            }
+            setTextColor(TEXT_MUTED)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            tag = "name_label"
         }
+        infoColumn.addView(phoneLabel)
+        infoColumn.addView(nameLabel)
+
+        // Country / operator hint
+        val countryLabel = TextView(this).apply {
+            tag = "country_label"
+            text = if (phoneNumber.isNotEmpty()) detectCountry(phoneNumber) else ""
+            setTextColor(TEXT_MUTED)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            visibility = if (phoneNumber.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        infoColumn.addView(countryLabel)
+
+        avatarContainer.addView(infoColumn)
+
+        // ── Spam badge ──
         val spamBadge = TextView(this).apply {
-            tag = "spam_badge"; setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setPadding(dp(10), dp(3), dp(10), dp(3)); visibility = android.view.View.GONE
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
+            tag = "spam_badge"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(dp(12), dp(4), dp(12), dp(4))
+            visibility = android.view.View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(4) }
         }
+
+        // ── Tags row ──
         val tagsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; tag = "tags_row"; visibility = android.view.View.GONE
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
+            orientation = LinearLayout.HORIZONTAL
+            tag = "tags_row"
+            visibility = android.view.View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
         }
-        card.addView(headerRow); card.addView(divider); card.addView(phoneLabel); card.addView(nameLabel); card.addView(spamBadge); card.addView(tagsRow)
+
+        // ── Bottom action buttons like Truecaller ──
+        val bottomRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(14) }
+        }
+
+        // "View details" button
+        val viewDetailsBtn = createActionButton("View details", BRAND_COLOR) {
+            if (phoneNumber.isNotEmpty()) {
+                openInApp(phoneNumber)
+            }
+        }
+        bottomRow.addView(viewDetailsBtn)
+
+        // "Add comment" button
+        val addTagBtn = createActionButton("Add tag", Color.parseColor("#8E8E98")) {
+            if (phoneNumber.isNotEmpty()) {
+                openInApp("tag:$phoneNumber")
+            }
+        }
+        bottomRow.addView(addTagBtn)
+
+        // ── Assemble card ──
+        card.addView(headerRow)
+        card.addView(divider)
+        card.addView(avatarContainer)
+        card.addView(spamBadge)
+        card.addView(tagsRow)
+        card.addView(bottomRow)
+
         container.addView(card)
         return container
     }
+
+    private fun createAvatarCircle(): android.view.View {
+        val size = dp(56)
+        val circle = ImageView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(size, size)
+            setImageDrawable(null)
+            background = GradientDrawable().apply {
+                setShape(GradientDrawable.OVAL)
+                setColor(Color.parseColor("#2A2A4A"))
+                setStroke(dp(2), Color.parseColor("#3A3A5A"))
+            }
+        }
+
+        // Add phone icon inside the circle
+        val iconText = TextView(this).apply {
+            text = "📞"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(size, size)
+            tag = "avatar_icon"
+        }
+
+        val wrapper = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(size, size)
+            addView(circle)
+            addView(iconText)
+        }
+        return wrapper
+    }
+
+    private fun createActionButton(text: String, color: Int, onClick: () -> Unit): android.view.View {
+        return TextView(this).apply {
+            this.text = text
+            setTextColor(color)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            setOnClickListener { onClick() }
+            background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(1), color)
+                cornerRadius = dp(8).toFloat()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = dp(8) }
+        }
+    }
+
+    private fun formatPhoneNumber(number: String): String {
+        // Try to format Egyptian numbers: +20XXXXXXXXX → +20 XXXX XXXX
+        val digits = number.replace(Regex("[^\\d+]"), "")
+        if (digits.startsWith("+20") && digits.length == 13) {
+            return "+20 ${digits.substring(3, 6)} ${digits.substring(6, 10)} ${digits.substring(10)}"
+        }
+        if (digits.startsWith("+") && digits.length >= 10) {
+            // International format with spaces
+            val cc = digits.substring(0, digits.length - 9)
+            val rest = digits.substring(digits.length - 9)
+            return "$cc ${rest.substring(0, 3)} ${rest.substring(3, 6)} ${rest.substring(6)}"
+        }
+        return number
+    }
+
+    private fun detectCountry(number: String): String {
+        return when {
+            number.startsWith("+20") || number.startsWith("20") || number.startsWith("01") -> "🇪🇬 Egypt"
+            number.startsWith("+966") || number.startsWith("966") -> "🇸🇦 Saudi Arabia"
+            number.startsWith("+971") || number.startsWith("971") -> "🇦🇪 UAE"
+            number.startsWith("+965") || number.startsWith("965") -> "🇰🇼 Kuwait"
+            number.startsWith("+974") || number.startsWith("974") -> "🇶🇦 Qatar"
+            number.startsWith("+973") || number.startsWith("973") -> "🇧🇭 Bahrain"
+            number.startsWith("+968") || number.startsWith("968") -> "🇴🇲 Oman"
+            number.startsWith("+1") -> "🇺🇸 USA / Canada"
+            number.startsWith("+44") -> "🇬🇧 UK"
+            number.startsWith("+49") -> "🇩🇪 Germany"
+            number.startsWith("+33") -> "🇫🇷 France"
+            number.startsWith("+212") || number.startsWith("212") -> "🇲🇦 Morocco"
+            number.startsWith("+213") || number.startsWith("213") -> "🇩🇿 Algeria"
+            number.startsWith("+216") || number.startsWith("216") -> "🇹🇳 Tunisia"
+            number.startsWith("+218") || number.startsWith("218") -> "🇱🇾 Libya"
+            number.startsWith("+249") || number.startsWith("249") -> "🇸🇩 Sudan"
+            number.startsWith("+962") || number.startsWith("962") -> "🇯🇴 Jordan"
+            number.startsWith("+961") || number.startsWith("961") -> "🇱🇧 Lebanon"
+            else -> ""
+        }
+    }
+
+    private fun openInApp(phoneNumber: String) {
+        try {
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            if (launchIntent != null) {
+                launchIntent.putExtra("phone_number", phoneNumber)
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                startActivity(launchIntent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "openInApp error: ${e.message}")
+        }
+    }
+
+    // ─── Network fetch ────────────────────────────────────────────
 
     private fun fetchPhoneDetails(phoneNumber: String) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val token = prefs.getString(PREF_TOKEN, null)
         val baseUrl = prefs.getString(PREF_BASE_URL, "https://meendah.mg-control.com")?.trimEnd('/') ?: "https://meendah.mg-control.com"
-        if (token.isNullOrEmpty()) { updateNameLabel("Sign in to see caller info"); return }
+
+        if (token.isNullOrEmpty()) {
+            updateNameLabel("Sign in to see caller info")
+            return
+        }
+
         scope.launch {
             try {
                 val encoded = java.net.URLEncoder.encode(phoneNumber, "UTF-8")
@@ -166,12 +415,25 @@ class CallOverlayService : Service() {
                     val conn = URL("$baseUrl/phones/$encoded").openConnection() as HttpURLConnection
                     conn.requestMethod = "GET"
                     conn.setRequestProperty("Authorization", "Bearer $token")
-                    conn.connectTimeout = 8000; conn.readTimeout = 8000
-                    try { if (conn.responseCode == 200) conn.inputStream.bufferedReader().readText() else null }
-                    finally { conn.disconnect() }
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+                    try {
+                        if (conn.responseCode == 200) conn.inputStream.bufferedReader().readText()
+                        else {
+                            Log.w(TAG, "fetch response code: ${conn.responseCode}")
+                            null
+                        }
+                    } finally { conn.disconnect() }
                 }
-                if (body != null) applyPhoneDetails(body) else updateNameLabel("Not found in database")
-            } catch (e: Exception) { Log.e(TAG, "fetch error: ${e.message}"); updateNameLabel("Could not fetch caller info") }
+                if (body != null) {
+                    applyPhoneDetails(body)
+                } else {
+                    updateNameLabel("Not found in database")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "fetch error: ${e.message}")
+                updateNameLabel("Could not fetch caller info")
+            }
         }
     }
 
@@ -183,39 +445,85 @@ class CallOverlayService : Service() {
             val spamScore = obj.optDouble("spamScore", 0.0)
             val totalSearches = obj.optInt("totalSearches", 0)
             val tags = obj.optJSONArray("tags")
-            card.findViewWithTag<TextView>("name_label")?.text =
-                if (displayName.isNotEmpty()) displayName else "Unknown - $totalSearches searches"
+
+            // Update name label
+            if (displayName.isNotEmpty()) {
+                card.findViewWithTag<TextView>("name_label")?.let {
+                    it.text = displayName
+                    it.setTextColor(TEXT_WHITE)
+                    it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                    it.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                }
+
+                // Update avatar icon to show first letter
+                val avatarWrapper = card.getChildAt(2) as? FrameLayout
+                avatarWrapper?.findViewWithTag<TextView>("avatar_icon")?.text = displayName.first().toString().uppercase()
+            } else {
+                updateNameLabel("Unknown - $totalSearches searches")
+            }
+
+            // Show spam badge
             if (spamScore > 0.3) {
                 val pct = (spamScore * 100).toInt()
-                val color = when { spamScore > 0.7 -> Color.parseColor("#FF3B30"); spamScore > 0.5 -> Color.parseColor("#FF9500"); else -> Color.parseColor("#FFCC00") }
+                val color = when {
+                    spamScore > 0.7 -> Color.parseColor("#FF3B30")
+                    spamScore > 0.5 -> Color.parseColor("#FF9500")
+                    else -> Color.parseColor("#FFCC00")
+                }
+                val textColor = if (spamScore > 0.5) Color.WHITE else Color.parseColor("#1C1C2E")
+
                 card.findViewWithTag<TextView>("spam_badge")?.apply {
-                    text = "Spam risk $pct%"
-                    setTextColor(if (spamScore > 0.5) Color.WHITE else Color.parseColor("#1C1C2E"))
-                    background = GradientDrawable().apply { setColor(color); cornerRadius = dp(10).toFloat() }
+                    text = "⚠️ Spam risk $pct%"
+                    setTextColor(textColor)
+                    background = GradientDrawable().apply {
+                        setColor(color)
+                        cornerRadius = dp(10).toFloat()
+                    }
                     visibility = android.view.View.VISIBLE
                 }
             }
+
+            // Show tags
             if (tags != null && tags.length() > 0) {
                 val tagsRow = card.findViewWithTag<LinearLayout>("tags_row")
+                tagsRow?.removeAllViews()
                 tagsRow?.visibility = android.view.View.VISIBLE
                 for (i in 0 until minOf(tags.length(), 4)) {
                     val t = tags.getJSONObject(i).optString("text", "")
                     if (t.isEmpty()) continue
                     tagsRow?.addView(TextView(this).apply {
-                        text = t; setTextColor(Color.parseColor("#208AEF")); setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                        text = t
+                        setTextColor(BRAND_COLOR)
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
                         setPadding(dp(8), dp(3), dp(8), dp(3))
-                        background = GradientDrawable().apply { setColor(Color.TRANSPARENT); setStroke(dp(1), Color.parseColor("#208AEF")); cornerRadius = dp(10).toFloat() }
-                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) }
+                        background = GradientDrawable().apply {
+                            setColor(Color.TRANSPARENT)
+                            setStroke(dp(1), BRAND_COLOR)
+                            cornerRadius = dp(10).toFloat()
+                        }
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply { marginEnd = dp(6) }
                     })
                 }
             }
-        } catch (e: Exception) { Log.e(TAG, "applyPhoneDetails error: ${e.message}"); updateNameLabel("Error parsing response") }
+        } catch (e: Exception) {
+            Log.e(TAG, "applyPhoneDetails error: ${e.message}")
+            updateNameLabel("Error parsing response")
+        }
     }
 
     private fun updateNameLabel(text: String) {
         val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
-        card.findViewWithTag<TextView>("name_label")?.text = text
+        card.findViewWithTag<TextView>("name_label")?.let {
+            it.text = text
+            it.setTextColor(TEXT_MUTED)
+            it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        }
     }
+
+    // ─── Lifecycle ──────────────────────────────────────────
 
     private fun dismissOverlay() {
         overlayView?.let {
@@ -230,7 +538,8 @@ class CallOverlayService : Service() {
             (getSystemService(NotificationManager::class.java)).createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Caller Info", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Shows incoming call information"
-                    setSound(null, null); enableVibration(false)
+                    setSound(null, null)
+                    enableVibration(false)
                 }
             )
         }
@@ -245,8 +554,10 @@ class CallOverlayService : Service() {
             .setContentTitle("Incoming call")
             .setContentText(if (phoneNumber.isEmpty()) "Looking up caller..." else "Looking up $phoneNumber...")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
-            .setContentIntent(pi).setSilent(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW).build()
+            .setContentIntent(pi)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
     }
 
     override fun onDestroy() {
