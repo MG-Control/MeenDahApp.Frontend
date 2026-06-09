@@ -4,7 +4,7 @@ const PERMISSIONS = [
   'android.permission.READ_PHONE_STATE',
   'android.permission.READ_CALL_LOG',
   'android.permission.FOREGROUND_SERVICE',
-  'android.permission.FOREGROUND_SERVICE_PHONE_CALL',
+  'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
 ];
 
 module.exports = function withCallDetection(config) {
@@ -46,7 +46,7 @@ module.exports = function withCallDetection(config) {
       application.service.push({
         $: {
           'android:name': serviceName,
-          'android:foregroundServiceType': 'phoneCall',
+          'android:foregroundServiceType': 'dataSync',
           'android:exported': 'false',
         },
       });

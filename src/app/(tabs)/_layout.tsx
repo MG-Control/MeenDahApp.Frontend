@@ -1,5 +1,6 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import React from 'react';
+import { usePathname } from 'expo-router';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -10,6 +11,11 @@ export default function TabLayout() {
   const theme = useTheme();
   const language = useSettingsStore((state) => state.language);
   const isRTL = language === 'ar';
+  const pathname = usePathname();
+
+  useEffect(() => {
+    console.log('[Tabs] navigated to:', pathname);
+  }, [pathname]);
 
   const tabs = [
     { name: 'index', label: t('tabs.home'), icon: require('@/assets/images/tabIcons/home.png') },
