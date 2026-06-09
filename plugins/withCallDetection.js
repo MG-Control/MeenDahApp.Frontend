@@ -1,33 +1,69 @@
-const { withAndroidManifest } = require('@expo/config-plugins');
+const { withAndroidManifest, withDangerousMod } = require('@expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
 
-const PERMISSIONS = [
-  'android.permission.READ_PHONE_STATE',
-  'android.permission.READ_CALL_LOG',
-  'android.permission.FOREGROUND_SERVICE',
-  'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
-];
+// Copy Kotlin source files from plugins/calldetection-src/ into the generated /android directory
+function withCallDetectionSources(config) {
+  return withDangerousMod(config, [
+    'android',
+    (cfg) => {
+      const srcDir = path.join(__dirname, 'calldetection-src');
+      const destDir = path.join(
+        cfg.modRequest.platformProjectRoot,
+        'app', 'src', 'main', 'java', 'com', 'meendah', 'app', 'calldetection'
+      );
 
-module.exports = function withCallDetection(config) {
-  return withAndroidManifest(config, (config) => {
-    const manifest = config.modResults;
-    const app = manifest.manifest;
+      fs.mkdirSync(destDir, { recursive: true });
 
-    // ── Permissions ──────────────────────────────────────────────────────────
-    if (!app['uses-permission']) app['uses-permission'] = [];
-    PERMISSIONS.forEach((name) => {
-      const exists = app['uses-permission'].some((p) => p.$['android:name'] === name);
-      if (!exists) app['uses-permission'].push({ $: { 'android:name': name } });
-    });
+      for (const file of fs.readdirSync(srcDir)) {
+        if (file.endsWith('.kt')) {
+          fs.copyFileSync(path.join(srcDir, file), path.join(destDir, file));
+        }
+      }
 
-    const application = app.application[0];
+      return cfg;
+    },
+  ]);
+}
 
-    // ── BroadcastReceiver ────────────────────────────────────────────────────
+// Add all required permissions, receiver, and service to AndroidManifest.xml
+function withCallDetectionManifest(config) {
+  return withAndroidManifest(config, (cfg) => {
+    const manifest = cfg.modResults.manifest;
+
+    // --- permissions ---
+    const requiredPermissions = [
+      'android.permission.READ_PHONE_STATE',
+      'android.permission.READ_CALL_LOG',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+    ];
+
+    if (!manifest['uses-permission']) manifest['uses-permission'] = [];
+    const existingPerms = new Set(
+      manifest['uses-permission'].map((p) => p.$?.['android:name'])
+    );
+    for (const perm of requiredPermissions) {
+      if (!existingPerms.has(perm)) {
+        manifest['uses-permission'].push({ $: { 'android:name': perm } });
+      }
+    }
+
+    // --- application entries ---
+    const application = manifest.application?.[0];
+    if (!application) return cfg;
+
     if (!application.receiver) application.receiver = [];
-    const receiverName = '.calldetection.CallReceiver';
-    if (!application.receiver.some((r) => r.$['android:name'] === receiverName)) {
+    if (!application.service) application.service = [];
+
+    const hasReceiver = application.receiver.some(
+      (r) => r.$?.['android:name'] === '.calldetection.CallReceiver'
+    );
+    if (!hasReceiver) {
       application.receiver.push({
         $: {
-          'android:name': receiverName,
+          'android:name': '.calldetection.CallReceiver',
           'android:exported': 'true',
         },
         'intent-filter': [
@@ -39,19 +75,25 @@ module.exports = function withCallDetection(config) {
       });
     }
 
-    // ── Foreground Service ───────────────────────────────────────────────────
-    if (!application.service) application.service = [];
-    const serviceName = '.calldetection.CallOverlayService';
-    if (!application.service.some((s) => s.$['android:name'] === serviceName)) {
+    const hasService = application.service.some(
+      (s) => s.$?.['android:name'] === '.calldetection.CallOverlayService'
+    );
+    if (!hasService) {
       application.service.push({
         $: {
-          'android:name': serviceName,
+          'android:name': '.calldetection.CallOverlayService',
           'android:foregroundServiceType': 'dataSync',
           'android:exported': 'false',
         },
       });
     }
 
-    return config;
+    return cfg;
   });
+}
+
+module.exports = (config) => {
+  config = withCallDetectionSources(config);
+  config = withCallDetectionManifest(config);
+  return config;
 };
