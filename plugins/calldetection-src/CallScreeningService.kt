@@ -1,14 +1,10 @@
 package com.meendah.app.calldetection
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.telecom.Call
 import android.telecom.CallScreeningService
-import android.telephony.TelephonyManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 
 /**
  * CallScreeningService — يعمل على Android 10+ (API 29+).
@@ -25,18 +21,11 @@ class MeenDahCallScreeningService : CallScreeningService() {
         val phoneNumber = details.handle?.schemeSpecificPart ?: ""
         Log.d(TAG, "[CallScreening] Incoming call from: $phoneNumber")
 
-        // Number might be empty or null - try to get it from TelephonyManager
-        val number = if (phoneNumber.isEmpty()) {
-            getNumberFromTelephonyManager()
-        } else {
-            phoneNumber
-        }
-
-        if (number.isNotEmpty()) {
-            Log.d(TAG, "[CallScreening] Starting overlay for: $number")
+        if (phoneNumber.isNotEmpty()) {
+            Log.d(TAG, "[CallScreening] Starting overlay for: $phoneNumber")
             val intent = Intent(this, CallOverlayService::class.java).apply {
                 action = CallOverlayService.ACTION_SHOW
-                putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, number)
+                putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, phoneNumber)
             }
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -47,24 +36,32 @@ class MeenDahCallScreeningService : CallScreeningService() {
             } catch (e: Exception) {
                 Log.e(TAG, "[CallScreening] startService failed: ${e.message}")
             }
+        } else {
+            // الرقم مش موجود في الـ details (مثلاً private number)، نشغّل الـ overlay بدون رقم
+            Log.d(TAG, "[CallScreening] No number in details, showing overlay without number")
+            val intent = Intent(this, CallOverlayService::class.java).apply {
+                action = CallOverlayService.ACTION_SHOW
+                putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, "")
+            }
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "[CallScreening] startService (no number) failed: ${e.message}")
+            }
         }
 
         // Always respond with "don't block" so the call proceeds normally
         respondToCall(details, CallResponse.Builder().build())
     }
 
+    @Suppress("UNUSED")
     private fun getNumberFromTelephonyManager(): String {
-        try {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) !=
-                PackageManager.PERMISSION_GRANTED) return ""
-
-            val tm = getSystemService(TELEPHONY_SERVICE) as? TelephonyManager ?: return ""
-            val number = tm.line1Number ?: ""
-            Log.d(TAG, "[CallScreening] TelephonyManager line1Number: $number")
-            return number
-        } catch (e: Exception) {
-            Log.e(TAG, "[CallScreening] getNumberFromTelephonyManager error: ${e.message}")
-            return ""
-        }
+        // ملاحظة: line1Number هو رقمك إنت مش رقم المتصل — لا تستخدم هذه الدالة لجلب رقم المتصل
+        // رقم المتصل متاح فقط من details.handle في onScreenCall أو من EXTRA_INCOMING_NUMBER في BroadcastReceiver
+        return ""
     }
 }

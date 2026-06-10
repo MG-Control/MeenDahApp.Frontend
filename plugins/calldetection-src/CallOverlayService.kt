@@ -165,7 +165,11 @@ class CallOverlayService : Service() {
         var initialTouchY = 0f
         var isDragging = false
 
-        view.setOnTouchListener { _, event ->
+        // نضع الـ drag listener على الـ card مباشرة (child الأول) مش على الـ container
+        // عشان الأزرار اللي في الـ card تستقبل الـ click events بشكل صحيح
+        val card = (view as? LinearLayout)?.getChildAt(0) ?: view
+
+        card.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = params.x
@@ -173,23 +177,27 @@ class CallOverlayService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
-                    false
+                    false // مهم: نرجع false عشان الـ click events توصل للأزرار
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
                     val dy = (event.rawY - initialTouchY).toInt()
-                    if (!isDragging && (Math.abs(dx) > dp(5) || Math.abs(dy) > dp(5))) {
+                    if (!isDragging && (Math.abs(dx) > dp(10) || Math.abs(dy) > dp(10))) {
                         isDragging = true
                     }
                     if (isDragging) {
                         params.x = initialX + dx
                         params.y = initialY + dy
                         try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
+                        true // consume فقط لما بنعمل drag فعلاً
+                    } else {
+                        false
                     }
-                    isDragging
                 }
                 MotionEvent.ACTION_UP -> {
-                    isDragging
+                    val wasDragging = isDragging
+                    isDragging = false
+                    wasDragging // لو كان drag نمنع الـ click، لو مش drag نخلي الـ click يعدي
                 }
                 else -> false
             }
@@ -459,11 +467,36 @@ class CallOverlayService : Service() {
 
     private fun openInApp(phoneNumber: String) {
         try {
-            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-            if (launchIntent != null) {
-                launchIntent.putExtra("phone_number", phoneNumber)
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                startActivity(launchIntent)
+            // نبني deep link يروح لشاشة phone/[number] مباشرة
+            val isTag = phoneNumber.startsWith("tag:")
+            val actualNumber = if (isTag) phoneNumber.removePrefix("tag:") else phoneNumber
+
+            val uri = if (actualNumber == "incoming") {
+                // مفيش رقم، نفتح الـ app على الـ home
+                android.net.Uri.parse("meendah://")
+            } else if (isTag) {
+                android.net.Uri.parse("meendah://phone/${java.net.URLEncoder.encode(actualNumber, "UTF-8")}?tab=tags")
+            } else {
+                // فتح شاشة تفاصيل الرقم مباشرة
+                android.net.Uri.parse("meendah://phone/${java.net.URLEncoder.encode(actualNumber, "UTF-8")}")
+            }
+
+            val deepLinkIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                setPackage(packageName)
+            }
+
+            // لو الـ deep link ما اشتغلش، نفتح الـ app العادي مع الـ extra
+            if (packageManager.resolveActivity(deepLinkIntent, 0) != null) {
+                startActivity(deepLinkIntent)
+            } else {
+                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+                if (launchIntent != null) {
+                    launchIntent.putExtra("phone_number", actualNumber)
+                    launchIntent.putExtra("open_tab", if (isTag) "tags" else "details")
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    startActivity(launchIntent)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "openInApp error: ${e.message}")
