@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="04919909-9a9a-43bc-af26-4a9b3b951505" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/calldetection-src/CallOverlayService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/calldetection-src/CallOverlayService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/calldetection-src/CallScreeningService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/calldetection-src/CallScreeningService.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
