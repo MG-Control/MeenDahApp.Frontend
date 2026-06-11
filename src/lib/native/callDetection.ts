@@ -33,4 +33,27 @@ export const callDetection = {
       CallDetectionModule.requestOverlayPermission();
     }
   },
+
+  async isDefaultCallerIdApp(): Promise<boolean> {
+    if (!isAndroid || !CallDetectionModule) return true;
+    return CallDetectionModule.isDefaultCallerIdApp();
+  },
+
+  async requestDefaultCallerIdApp(): Promise<boolean> {
+    if (!isAndroid || !CallDetectionModule) return false;
+    return CallDetectionModule.requestDefaultCallerIdApp();
+  },
+
+  // TEST FUNCTIONS
+  testShowOverlay(phoneNumber: string = "+201012345678") {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.testShowOverlay(phoneNumber);
+    }
+  },
+
+  testHideOverlay() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.testHideOverlay();
+    }
+  },
 };

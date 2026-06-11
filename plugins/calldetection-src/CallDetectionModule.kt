@@ -6,10 +6,16 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import com.facebook.react.bridge.*
 
 class CallDetectionModule(reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
+
+    companion object {
+        private const val REQUEST_ROLE_CODE = 1001
+        private const val TAG = "MeenDah"
+    }
 
     override fun getName() = "CallDetectionModule"
 
@@ -51,7 +57,7 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
 
     /**
      * يطلب من المستخدم تعيين الـ app كـ default caller ID app.
-     * ده مطلوب على Android 10+ (API 29+) عشان MeenDahCallScreeningService يشتغل ويجيب رقم المتصل.
+     * ده مطلوب على Android 10+ عشان MeenDahCallScreeningService يشتغل ويجيب رقم المتصل.
      * على Android 10+: بيستخدم RoleManager.ROLE_CALL_SCREENING
      * على Android أقدم: بيفتح إعدادات الـ default phone app
      */
@@ -82,11 +88,67 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    /**
+     * يتحقق إذا كان التطبيق هو الـ Default Caller ID & Spam App
+     */
+    @ReactMethod
+    fun isDefaultCallerIdApp(promise: Promise) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val roleManager = reactApplicationContext.getSystemService(RoleManager::class.java)
+                val isHeld = roleManager?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
+                Log.d(TAG, "[CallDetectionModule] isDefaultCallerIdApp: $isHeld")
+                promise.resolve(isHeld)
+            } else {
+                // على Android أقل من 10، مش محتاجة default app، فنرجع true دائماً
+                promise.resolve(true)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[CallDetectionModule] isDefaultCallerIdApp failed: ${e.message}", e)
+            promise.resolve(false)
+        }
+    }
+
+    /**
+     * TEST: يظهر الـ overlay يدوياً لاختبار بدون مكالمة
+     */
+    @ReactMethod
+    fun testShowOverlay(phoneNumber: String) {
+        Log.d(TAG, "[CallDetectionModule] testShowOverlay called with: $phoneNumber")
+        val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
+            action = CallOverlayService.ACTION_SHOW
+            putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, phoneNumber)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                reactApplicationContext.startForegroundService(intent)
+            } else {
+                reactApplicationContext.startService(intent)
+            }
+            Log.d(TAG, "[CallDetectionModule] test service started OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "[CallDetectionModule] test startService failed: ${e.message}", e)
+        }
+    }
+
+    /**
+     * TEST: يخفي الـ overlay يدوياً
+     */
+    @ReactMethod
+    fun testHideOverlay() {
+        Log.d(TAG, "[CallDetectionModule] testHideOverlay called")
+        val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
+            action = CallOverlayService.ACTION_HIDE
+        }
+        try {
+            reactApplicationContext.startService(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "[CallDetectionModule] test hide failed: ${e.message}", e)
+        }
+    }
+
     private fun prefs() = reactApplicationContext.getSharedPreferences(
         CallOverlayService.PREFS_NAME, Context.MODE_PRIVATE
     )
-
-    companion object {
-        private const val REQUEST_ROLE_CODE = 1001
-    }
 }
