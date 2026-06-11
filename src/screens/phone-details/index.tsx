@@ -27,6 +27,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { PhoneDetails, usePhoneLookup } from '@/lib/hooks/usePhoneLookup';
 import { useTags } from '@/lib/hooks/useTags';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useBlockedNumbersStore } from '@/lib/stores/blockedNumbersStore';
 import { formatRelativeTime } from '@/lib/utils/formatRelativeTime';
 import { decodePhoneFromRoute } from '@/lib/utils/phoneRoute';
 import { getSpamDetails, getSpamDetailsAr } from '@/lib/utils/spamScore';
@@ -65,10 +66,13 @@ export default function PhoneDetailScreen() {
     isRefetching,
   } = usePhoneLookup(phoneNumber, { skipInitialFetch: shouldSkipInitialLookup });
   const { addTagAsync, isAddingTag } = useTags(phoneNumber || '');
+  const { blockNumber, unblockNumber, isBlocked } = useBlockedNumbersStore();
 
   const [localPhone, setLocalPhone] = useState<PhoneDetails | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  
+  const isNumberBlocked = phoneNumber ? isBlocked(phoneNumber) : false;
 
   useEffect(() => {
     if (phone) {
@@ -233,6 +237,44 @@ export default function PhoneDetailScreen() {
   const resolveTagColor = (tagEntry: PhoneDetails['tags'][number]) => {
     const tagInfo = getTagById(tagEntry.category);
     return tagInfo?.color || '#6b7280';
+  };
+
+  const handleBlockToggle = () => {
+    if (!phoneNumber) return;
+    
+    if (isNumberBlocked) {
+      Alert.alert(
+        t('phone.unblockConfirmTitle'),
+        t('phone.unblockConfirmMessage', { number: phoneNumber }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('phone.unblock'),
+            onPress: () => {
+              unblockNumber(phoneNumber);
+              Alert.alert(t('common.success'), t('phone.unblockSuccess'));
+            },
+            style: 'destructive',
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        t('phone.blockConfirmTitle'),
+        t('phone.blockConfirmMessage', { number: phoneNumber }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('phone.blockReport'),
+            onPress: () => {
+              blockNumber(phoneNumber, displayData?.displayName);
+              Alert.alert(t('common.success'), t('phone.blockSuccess'));
+            },
+            style: 'destructive',
+          },
+        ]
+      );
+    }
   };
 
   const profileSections = [
@@ -606,12 +648,20 @@ export default function PhoneDetailScreen() {
 
           <View style={styles.footerActions}>
             <TouchableOpacity
-              style={[styles.blockButton, { backgroundColor: '#ef444415', borderColor: '#ef444433' }]}
-              activeOpacity={1}
-              onPress={() => Alert.alert('Coming soon قريبا', "Coming soon قريبا")}
+              style={[
+                styles.blockButton,
+                {
+                  backgroundColor: isNumberBlocked ? '#10b98115' : '#ef444415',
+                  borderColor: isNumberBlocked ? '#10b98133' : '#ef444433',
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={handleBlockToggle}
             >
-              <Ionicons name="ban" size={20} color="#ef4444" />
-              <ThemedText style={styles.blockButtonText}>{t('phone.blockReport')}</ThemedText>
+              <Ionicons name={isNumberBlocked ? 'checkmark-circle' : 'ban'} size={20} color={isNumberBlocked ? '#10b981' : '#ef4444'} />
+              <ThemedText style={[styles.blockButtonText, { color: isNumberBlocked ? '#10b981' : '#ef4444' }]}>
+                {isNumberBlocked ? t('phone.unblock') : t('phone.blockReport')}
+              </ThemedText>
             </TouchableOpacity>
           </View>
         </View>
