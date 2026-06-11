@@ -77,7 +77,14 @@ class CallOverlayService : Service() {
     private fun startAsForeground(number: String) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, buildNotification(number), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                // FOREGROUND_SERVICE_TYPE_PHONE_CALL مسموح بيها من الـ background على Android 10+
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildNotification(number),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForeground(NOTIFICATION_ID, buildNotification(number))
             } else {
                 startForeground(NOTIFICATION_ID, buildNotification(number))
             }
