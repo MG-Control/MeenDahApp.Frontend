@@ -15,20 +15,9 @@ class MeenDahCallScreeningService : CallScreeningService() {
 
     companion object {
         private const val TAG = "MeenDah"
-        private var lastHandledCallId: String? = null
     }
 
     override fun onScreenCall(details: Call.Details) {
-        val callId = details.callId.toString()
-        
-        // تجنب التعامل مع نفس المكالمة مرتين
-        if (callId == lastHandledCallId) {
-            Log.d(TAG, "[CallScreening] Already handled call: $callId")
-            respondToCall(details, CallResponse.Builder().build())
-            return
-        }
-        lastHandledCallId = callId
-
         val phoneNumber = details.handle?.schemeSpecificPart ?: ""
         Log.d(TAG, "[CallScreening] Incoming call from: $phoneNumber")
 
