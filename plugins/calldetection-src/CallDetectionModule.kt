@@ -109,6 +109,28 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun isIgnoringBatteryOptimizations(promise: Promise) {
+        val powerManager = reactApplicationContext.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val isIgnoring = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            powerManager.isIgnoringBatteryOptimizations(reactApplicationContext.packageName)
+        } else {
+            true
+        }
+        promise.resolve(isIgnoring)
+    }
+
+    @ReactMethod
+    fun requestIgnoreBatteryOptimizations() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${reactApplicationContext.packageName}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            reactApplicationContext.startActivity(intent)
+        }
+    }
+
     /**
      * TEST: يظهر الـ overlay يدوياً لاختبار بدون مكالمة
      */

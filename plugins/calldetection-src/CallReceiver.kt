@@ -21,34 +21,36 @@ class CallReceiver : BroadcastReceiver() {
         val action = intent.action
         Log.d(TAG, "CallReceiver onReceive action=$action")
 
-        // Handle boot complete - just for logging
         if (action == Intent.ACTION_BOOT_COMPLETED || action == "android.intent.action.QUICKBOOT_POWERON") {
             Log.d(TAG, "Boot completed - CallReceiver ready!")
             return
         }
 
-        // Handle phone state changes
         if (action != TelephonyManager.ACTION_PHONE_STATE_CHANGED &&
             action != "android.intent.action.PHONE_STATE") return
 
         val state = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
-        Log.d(TAG, "PHONE_STATE=$state lastState=$lastState")
+        Log.d(TAG, "PHONE_STATE=$state")
 
         if (state == null || state == lastState) return
         lastState = state
 
         when (state) {
             TelephonyManager.EXTRA_STATE_RINGING -> {
-                @Suppress("DEPRECATION")
-                val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER) ?: ""
-                Log.d(TAG, "RINGING number=[$number]")
+                // Try multiple ways to get the number in BroadcastReceiver
+                var number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER) ?: ""
+                
+                // On modern Android, EXTRA_INCOMING_NUMBER is often null.
+                // CallScreeningService is the reliable way, but we try our best here.
+                if (number.isEmpty()) {
+                    number = intent.getStringExtra("incoming_number") ?: ""
+                }
 
-                showDebugNotification(context, "Incoming call: ${number.ifEmpty { "No number" }}")
+                Log.d(TAG, "RINGING number=[$number]")
                 startOverlayService(context, number)
             }
             TelephonyManager.EXTRA_STATE_OFFHOOK -> {
                 Log.d(TAG, "OFFHOOK")
-                hideOverlayService(context)
             }
             TelephonyManager.EXTRA_STATE_IDLE -> {
                 Log.d(TAG, "IDLE")

@@ -55,56 +55,60 @@ class CallOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand action=${intent?.action}")
-        when (intent?.action) {
+        val action = intent?.action
+        val number = intent?.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
+        Log.d(TAG, "onStartCommand action=$action number=[$number]")
+
+        // Always ensure foreground status immediately
+        startAsForeground(number)
+
+        when (action) {
             ACTION_SHOW -> {
-                val number = intent.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
-                Log.d(TAG, "ACTION_SHOW number=[$number]")
-                startAsForeground(number)
+                val canDraw = canDrawOverlays()
+                Log.d(TAG, "Can draw overlays: $canDraw")
                 if (overlayView == null) {
-                    // Overlay not showing yet - create it
-                    if (canDrawOverlays()) {
+                    if (canDraw) {
                         showOverlay(number)
                     } else {
-                        Log.w(TAG, "No SYSTEM_ALERT_WINDOW permission")
+                        Log.e(TAG, "Overlay permission not granted!")
                     }
                 } else if (number.isNotEmpty()) {
-                    // Overlay already showing - update with the number
-                    Log.d(TAG, "Overlay already showing, updating with number=$number")
                     updateOverlayPhoneNumber(number)
                 }
             }
             ACTION_HIDE -> {
-                Log.d(TAG, "ACTION_HIDE")
                 dismissOverlay()
-                stopSelf(startId)
+                stopSelf()
             }
             else -> {
-                Log.w(TAG, "Unknown action, stopping service")
-                stopSelf(startId)
+                if (action != null) stopSelf()
             }
         }
-        return START_REDELIVER_INTENT // SUPER STICKY - redeliver intent if service gets killed!
+        return START_REDELIVER_INTENT
     }
 
     private fun startAsForeground(number: String) {
+        val notification = buildNotification(number)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // FOREGROUND_SERVICE_TYPE_PHONE_CALL مسموح بيها من الـ background على Android 10+
+                // Must use the correct FGS type for call identification
                 startForeground(
                     NOTIFICATION_ID,
-                    buildNotification(number),
+                    notification,
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
                 )
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForeground(NOTIFICATION_ID, buildNotification(number))
             } else {
-                startForeground(NOTIFICATION_ID, buildNotification(number))
+                startForeground(NOTIFICATION_ID, notification)
             }
-            Log.d(TAG, "startForeground OK")
+            Log.d(TAG, "Successfully promoted to foreground")
         } catch (e: Exception) {
-            Log.e(TAG, "startForeground FAILED: ${e.message}", e)
-            try { startForeground(NOTIFICATION_ID, buildNotification(number)) } catch (_: Exception) { stopSelf() }
+            Log.e(TAG, "startForeground failed: ${e.message}")
+            // Fallback to basic foreground if type-specific fails
+            try {
+                startForeground(NOTIFICATION_ID, notification)
+            } catch (e2: Exception) {
+                Log.e(TAG, "Critical failure: could not start foreground service at all")
+            }
         }
     }
 
@@ -212,30 +216,21 @@ class CallOverlayService : Service() {
     }
 
     private fun updateOverlayPhoneNumber(phoneNumber: String) {
-        if (overlayView == null) return
+        if (overlayView == null || phoneNumber.isEmpty()) return
         
         val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
         
         // Update phone label
-        val phoneLabel = card.findViewWithTag<TextView>("phone_label")
-        if (phoneLabel != null) {
-            phoneLabel.text = formatPhoneNumber(phoneNumber)
-        } else {
-            // Fallback to finding by position if tag not set
-            val avatarContainer = card.getChildAt(2) as? LinearLayout ?: return
-            val infoColumn = avatarContainer.getChildAt(1) as? LinearLayout ?: return
-            (infoColumn.getChildAt(0) as? TextView)?.text = formatPhoneNumber(phoneNumber)
-        }
+        card.findViewWithTag<TextView>("phone_label")?.text = formatPhoneNumber(phoneNumber)
         
         // Update name label
         updateNameLabel("Searching...")
         
         // Update country
-        val countryLabel = card.findViewWithTag<TextView>("country_label")
-        if (countryLabel != null) {
+        card.findViewWithTag<TextView>("country_label")?.let {
             val countryText = detectCountry(phoneNumber)
-            countryLabel.text = countryText
-            countryLabel.visibility = if (countryText.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+            it.text = countryText
+            it.visibility = if (countryText.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
         }
         
         showAvatarLoading(true)
@@ -315,7 +310,7 @@ class CallOverlayService : Service() {
 
         val phoneLabel = TextView(this).apply {
             text = if (phoneNumber.isEmpty()) {
-                "Incoming call"
+                "Incoming Call"
             } else {
                 formatPhoneNumber(phoneNumber)
             }
@@ -327,7 +322,7 @@ class CallOverlayService : Service() {
 
         val nameLabel = TextView(this).apply {
             text = if (phoneNumber.isEmpty()) {
-                "No caller ID available"
+                "Identifying caller..."
             } else {
                 "Searching..."
             }

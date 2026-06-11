@@ -22,7 +22,15 @@ export default function HomeScreen() {
   const { user } = useAuthStore();
   const { hasSyncedContacts } = useSettingsStore();
   const { syncContacts, isSyncing } = useContactSync();
-  const { isDefaultCallerId, hasOverlayPermission, requestDefaultCallerId, requestOverlayPermission, checkPermissionsStatus } = useCallOverlay();
+  const {
+    isDefaultCallerId,
+    hasOverlayPermission,
+    isIgnoringBattery,
+    requestDefaultCallerId,
+    requestOverlayPermission,
+    requestIgnoreBatteryOptimizations,
+    checkPermissionsStatus
+  } = useCallOverlay();
   const [isRequesting, setIsRequesting] = useState(false);
 
   const handleRequestDefault = async () => {
@@ -34,6 +42,11 @@ export default function HomeScreen() {
 
   const handleRequestOverlay = async () => {
     await requestOverlayPermission();
+    await checkPermissionsStatus();
+  };
+
+  const handleRequestBattery = async () => {
+    await requestIgnoreBatteryOptimizations();
     await checkPermissionsStatus();
   };
 
@@ -123,6 +136,31 @@ export default function HomeScreen() {
               >
                 <Ionicons name="apps-outline" size={18} color="white" />
                 <ThemedText style={styles.syncButtonText}>Allow Overlay</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        )}
+
+        {/* Battery Optimization Card */}
+        {Platform.OS === 'android' && isIgnoringBattery === false && (
+          <ThemedView type="backgroundElement" style={[styles.card, styles.syncCard, {
+            borderColor: 'rgba(76, 217, 100, 0.3)',
+            backgroundColor: 'rgba(76, 217, 100, 0.05)',
+          }]}>
+            <View style={[styles.syncIconContainer, { backgroundColor: 'rgba(76, 217, 100, 0.1)' }]}>
+              <Ionicons name="battery-dead" size={28} color="#4CD964" />
+            </View>
+            <View style={styles.syncContent}>
+              <ThemedText type="subtitle">Prevent App Shutdown</ThemedText>
+              <ThemedText themeColor="textSecondary" style={styles.syncDesc}>
+                Disable battery optimization to keep Meendah active for incoming calls.
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#4CD964' }]}
+                onPress={handleRequestBattery}
+              >
+                <Ionicons name="flash-outline" size={18} color="white" />
+                <ThemedText style={styles.syncButtonText}>Disable Optimization</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>
