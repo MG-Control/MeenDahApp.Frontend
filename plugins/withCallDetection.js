@@ -35,17 +35,7 @@ function withCallDetectionManifest(config) {
       "android.permission.MANAGE_OWN_CALLS",
       "android.permission.WAKE_LOCK",
       "android.permission.READ_PHONE_NUMBERS",
-      "android.permission.ANSWER_PHONE_CALLS",
-      "android.permission.READ_PHONE_STATE",
-      "android.permission.READ_CALL_LOG",
-      "android.permission.SYSTEM_ALERT_WINDOW",
-      "android.permission.FOREGROUND_SERVICE",
-      "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
-      "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
-      "android.permission.MANAGE_OWN_CALLS",
-      "android.permission.WAKE_LOCK",
-      "android.permission.READ_PHONE_NUMBERS",
-      "android.permission.ANSWER_PHONE_CALLS",
+      "android.permission.ANSWER_PHONE_CALLS"
     ];
     if (!manifest['uses-permission']) manifest['uses-permission'] = [];
     const existingPerms = new Set(manifest['uses-permission'].map(p => p.$?.['android:name']));

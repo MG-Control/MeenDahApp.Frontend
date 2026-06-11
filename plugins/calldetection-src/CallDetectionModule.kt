@@ -115,6 +115,12 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun testShowOverlay(phoneNumber: String) {
         Log.d(TAG, "[CallDetectionModule] testShowOverlay called with: $phoneNumber")
+        val hasOverlayPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(reactApplicationContext)
+        Log.d(TAG, "[CallDetectionModule] has overlay permission: $hasOverlayPermission")
+        if (!hasOverlayPermission) {
+            Log.e(TAG, "[CallDetectionModule] NO OVERLAY PERMISSION - can't show overlay!")
+            return
+        }
         val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
             action = CallOverlayService.ACTION_SHOW
             putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, phoneNumber)
