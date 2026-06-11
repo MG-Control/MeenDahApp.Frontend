@@ -75,16 +75,35 @@ function withCallDetectionManifest(config) {
       });
     }
 
-    const hasService = application.service.some(
+    const hasOverlayService = application.service.some(
       (s) => s.$?.['android:name'] === '.calldetection.CallOverlayService'
     );
-    if (!hasService) {
+    if (!hasOverlayService) {
       application.service.push({
         $: {
           'android:name': '.calldetection.CallOverlayService',
           'android:foregroundServiceType': 'dataSync',
           'android:exported': 'false',
         },
+      });
+    }
+
+    // ── MeenDahCallScreeningService (Android 10+ - الطريقة الوحيدة الموثوقة لجلب رقم المتصل)
+    const hasScreeningService = application.service.some(
+      (s) => s.$?.['android:name'] === '.calldetection.MeenDahCallScreeningService'
+    );
+    if (!hasScreeningService) {
+      application.service.push({
+        $: {
+          'android:name': '.calldetection.MeenDahCallScreeningService',
+          'android:exported': 'true',
+          'android:permission': 'android.permission.BIND_SCREENING_SERVICE',
+        },
+        'intent-filter': [
+          {
+            action: [{ $: { 'android:name': 'android.telecom.CallScreeningService' } }],
+          },
+        ],
       });
     }
 

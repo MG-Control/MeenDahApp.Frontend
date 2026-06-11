@@ -110,7 +110,7 @@ class CallOverlayService : Service() {
         else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
 
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             type,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -120,7 +120,8 @@ class CallOverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 0
+            width = resources.displayMetrics.widthPixels - dp(24) // full width مع margin
+            x = dp(12)
             y = dp(48)
         }
         overlayParams = params
@@ -165,8 +166,7 @@ class CallOverlayService : Service() {
         var initialTouchY = 0f
         var isDragging = false
 
-        // نضع الـ drag listener على الـ card مباشرة (child الأول) مش على الـ container
-        // عشان الأزرار اللي في الـ card تستقبل الـ click events بشكل صحيح
+        // الـ drag على الـ card (child)، لكن updateViewLayout على الـ view الأصلي (container)
         val card = (view as? LinearLayout)?.getChildAt(0) ?: view
 
         card.setOnTouchListener { _, event ->
@@ -177,27 +177,28 @@ class CallOverlayService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
-                    false // مهم: نرجع false عشان الـ click events توصل للأزرار
+                    false // نرجع false عشان الـ click events توصل للأزرار
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
                     val dy = (event.rawY - initialTouchY).toInt()
-                    if (!isDragging && (Math.abs(dx) > dp(10) || Math.abs(dy) > dp(10))) {
+                    if (!isDragging && (Math.abs(dx) > dp(8) || Math.abs(dy) > dp(8))) {
                         isDragging = true
                     }
                     if (isDragging) {
                         params.x = initialX + dx
                         params.y = initialY + dy
+                        // updateViewLayout على الـ view الأصلي (container) مش الـ card
                         try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
-                        true // consume فقط لما بنعمل drag فعلاً
+                        true
                     } else {
                         false
                     }
                 }
-                MotionEvent.ACTION_UP -> {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     val wasDragging = isDragging
                     isDragging = false
-                    wasDragging // لو كان drag نمنع الـ click، لو مش drag نخلي الـ click يعدي
+                    wasDragging
                 }
                 else -> false
             }
