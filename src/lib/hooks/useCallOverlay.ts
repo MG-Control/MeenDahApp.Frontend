@@ -17,15 +17,18 @@ export function useCallOverlay() {
   const permissionsRequested = useRef(false);
   const [isDefaultCallerId, setIsDefaultCallerId] = useState<boolean | null>(null);
   const [hasOverlayPermission, setHasOverlayPermission] = useState<boolean | null>(null);
+  const [isIgnoringBattery, setIsIgnoringBattery] = useState<boolean | null>(null);
   const appState = useRef(AppState.currentState);
 
-  // Check permissions (default caller id & overlay)
+  // Check permissions (default caller id & overlay & battery)
   const checkPermissionsStatus = async () => {
     if (Platform.OS !== 'android') return;
     const status = await callDetection.isDefaultCallerIdApp();
     const overlay = await callDetection.hasOverlayPermission();
+    const battery = await callDetection.isIgnoringBatteryOptimizations();
     setIsDefaultCallerId(status);
     setHasOverlayPermission(overlay);
+    setIsIgnoringBattery(battery);
   };
 
   // Set API base URL once
@@ -82,8 +85,10 @@ export function useCallOverlay() {
   return {
     isDefaultCallerId,
     hasOverlayPermission,
+    isIgnoringBattery,
     requestDefaultCallerId: callDetection.requestDefaultCallerIdApp,
     requestOverlayPermission: callDetection.requestOverlayPermission,
+    requestIgnoreBatteryOptimizations: callDetection.requestIgnoreBatteryOptimizations,
     checkPermissionsStatus,
   };
 }
@@ -138,6 +143,13 @@ async function ensurePermissions(s: Strings) {
     // ده الأهم — بدونه CallScreeningService مش بيشتغل خالص
     if (__DEV__) console.log('[CallOverlay] Requesting default caller ID app...');
     await requestDefaultCallerIdApp();
+
+    // 6. Battery Optimizations — لمنع قتل الخدمة في الخلفية
+    const isIgnoringBattery = await callDetection.isIgnoringBatteryOptimizations();
+    if (!isIgnoringBattery) {
+      if (__DEV__) console.log('[CallOverlay] Requesting battery optimization ignore...');
+      callDetection.requestIgnoreBatteryOptimizations();
+    }
 
     if (__DEV__) console.log('[CallOverlay] Permission request flow complete!');
   } catch (e) {
