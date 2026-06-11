@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { NativeModules, PermissionsAndroid, Platform, AppState } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { callDetection } from '@/lib/native/callDetection';
 import { useAuthStore } from '@/lib/stores/authStore';
@@ -15,6 +15,15 @@ export function useCallOverlay() {
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const { t } = useTranslation();
   const permissionsRequested = useRef(false);
+  const [isDefaultCallerId, setIsDefaultCallerId] = useState<boolean | null>(null);
+  const appState = useRef(AppState.currentState);
+
+  // Check if we're default caller ID
+  const checkDefaultStatus = async () => {
+    if (Platform.OS !== 'android') return;
+    const status = await callDetection.isDefaultCallerIdApp();
+    setIsDefaultCallerId(status);
+  };
 
   // Set API base URL once
   useEffect(() => {
@@ -49,6 +58,28 @@ export function useCallOverlay() {
       notNow: t('common.notNow'),
     });
   }, [_hasHydrated, accessToken]);
+
+  // Check status on app foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        checkDefaultStatus();
+      }
+      appState.current = nextAppState;
+    });
+
+    checkDefaultStatus(); // Check on mount
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  return {
+    isDefaultCallerId,
+    requestDefaultCallerId: callDetection.requestDefaultCallerIdApp,
+    checkDefaultStatus,
+  };
 }
 
 interface Strings {
@@ -101,9 +132,7 @@ async function ensurePermissions(s: Strings) {
  */
 async function requestDefaultCallerIdApp() {
   try {
-    const { CallDetectionModule } = NativeModules;
-    if (!CallDetectionModule?.requestDefaultCallerIdApp) return;
-    await CallDetectionModule.requestDefaultCallerIdApp();
+    await callDetection.requestDefaultCallerIdApp();
   } catch (e) {
     if (__DEV__) console.warn('[CallOverlay] requestDefaultCallerIdApp failed:', e);
   }

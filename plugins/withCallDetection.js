@@ -33,13 +33,17 @@ function withCallDetectionManifest(config) {
 
     // --- permissions ---
     const requiredPermissions = [
-      'android.permission.READ_PHONE_STATE',
-      'android.permission.READ_CALL_LOG',
-      'android.permission.SYSTEM_ALERT_WINDOW',
-      'android.permission.FOREGROUND_SERVICE',
-      'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
-      'android.permission.FOREGROUND_SERVICE_PHONE_CALL',
-      'android.permission.MANAGE_OWN_CALLS',
+      "android.permission.READ_PHONE_STATE",
+      "android.permission.READ_CALL_LOG",
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
+      "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+      "android.permission.MANAGE_OWN_CALLS",
+      "android.permission.WAKE_LOCK",
+      "android.permission.RECEIVE_BOOT_COMPLETED",
+      "android.permission.READ_PHONE_NUMBERS",
+      "android.permission.ANSWER_PHONE_CALLS",
     ];
 
     if (!manifest['uses-permission']) manifest['uses-permission'] = [];
@@ -67,11 +71,16 @@ function withCallDetectionManifest(config) {
         $: {
           'android:name': '.calldetection.CallReceiver',
           'android:exported': 'true',
+          'android:enabled': 'true',
         },
         'intent-filter': [
           {
-            $: { 'android:priority': '999' },
-            action: [{ $: { 'android:name': 'android.intent.action.PHONE_STATE' } }],
+            $: { 'android:priority': 2147483647 }, // MAX PRIORITY - INTEGER NOT STRING!
+            action: [
+              { $: { 'android:name': 'android.intent.action.PHONE_STATE' } },
+              { $: { 'android:name': 'android.intent.action.BOOT_COMPLETED' } },
+              { $: { 'android:name': 'android.intent.action.QUICKBOOT_POWERON' } },
+            ],
           },
         ],
       });
@@ -86,11 +95,14 @@ function withCallDetectionManifest(config) {
           'android:name': '.calldetection.CallOverlayService',
           'android:foregroundServiceType': 'phoneCall|dataSync',
           'android:exported': 'false',
+          'android:enabled': 'true',
+          'android:stopWithTask': 'false', // Don't stop when app closes!
+          'android:directBootAware': 'true',
         },
       });
     }
 
-    // ── MeenDahCallScreeningService (Android 10+ - الطريقة الوحيدة الموثوقة لجلب رقم المتصل)
+    // ── MeenDahCallScreeningService (Android 10+ - الطريقة الوحيدة الموثوقة لجلب رقم المتصل
     const hasScreeningService = application.service.some(
       (s) => s.$?.['android:name'] === '.calldetection.MeenDahCallScreeningService'
     );
@@ -99,6 +111,7 @@ function withCallDetectionManifest(config) {
         $: {
           'android:name': '.calldetection.MeenDahCallScreeningService',
           'android:exported': 'true',
+          'android:enabled': 'true',
           'android:permission': 'android.permission.BIND_SCREENING_SERVICE',
         },
         'intent-filter': [

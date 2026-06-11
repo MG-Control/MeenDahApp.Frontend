@@ -77,11 +77,14 @@ class CallOverlayService : Service() {
             ACTION_HIDE -> {
                 Log.d(TAG, "ACTION_HIDE")
                 dismissOverlay()
-                stopSelf()
+                stopSelf(startId)
             }
-            else -> stopSelf()
+            else -> {
+                Log.w(TAG, "Unknown action, stopping service")
+                stopSelf(startId)
+            }
         }
-        return START_STICKY // Changed from START_NOT_STICKY to keep service alive
+        return START_REDELIVER_INTENT // SUPER STICKY - redeliver intent if service gets killed!
     }
 
     private fun startAsForeground(number: String) {
@@ -143,14 +146,12 @@ class CallOverlayService : Service() {
         }
         overlayParams = params
 
-        // Make the header draggable instead of the whole card
+        // Make the entire card draggable
         val card = (view as? LinearLayout)?.getChildAt(0) as? LinearLayout
-        val header = card?.getChildAt(0) as? LinearLayout
-        if (header != null) {
-            setupDragListener(view, header, params)
+        if (card != null) {
+            setupDragListener(view, card, params)
         } else {
-            // Fallback to whole card if header not found
-            setupDragListener(view, card ?: view, params)
+            setupDragListener(view, view, params)
         }
 
         try {
@@ -373,35 +374,12 @@ class CallOverlayService : Service() {
             ).apply { topMargin = dp(8) }
         }
 
-        // ── Bottom action buttons like Truecaller ──
-        val bottomRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(14) }
-        }
-
-        // "View details" button
-        val viewDetailsBtn = createActionButton("View details", BRAND_COLOR) {
-            openInApp(if (phoneNumber.isNotEmpty()) phoneNumber else "incoming")
-        }
-        bottomRow.addView(viewDetailsBtn)
-
-        // "Add tag" button
-        val addTagBtn = createActionButton("Add tag", Color.parseColor("#8E8E98")) {
-            openInApp(if (phoneNumber.isNotEmpty()) "tag:$phoneNumber" else "tag:incoming")
-        }
-        bottomRow.addView(addTagBtn)
-
         // ── Assemble card ──
         card.addView(headerRow)
         card.addView(divider)
         card.addView(avatarContainer)
         card.addView(spamBadge)
         card.addView(tagsRow)
-        card.addView(bottomRow)
 
         container.addView(card)
         return container
