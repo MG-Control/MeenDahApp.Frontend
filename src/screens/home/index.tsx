@@ -22,14 +22,19 @@ export default function HomeScreen() {
   const { user } = useAuthStore();
   const { hasSyncedContacts } = useSettingsStore();
   const { syncContacts, isSyncing } = useContactSync();
-  const { isDefaultCallerId, requestDefaultCallerId, checkDefaultStatus } = useCallOverlay();
+  const { isDefaultCallerId, hasOverlayPermission, requestDefaultCallerId, requestOverlayPermission, checkPermissionsStatus } = useCallOverlay();
   const [isRequesting, setIsRequesting] = useState(false);
 
   const handleRequestDefault = async () => {
     setIsRequesting(true);
     await requestDefaultCallerId();
-    await checkDefaultStatus();
+    await checkPermissionsStatus();
     setIsRequesting(false);
+  };
+
+  const handleRequestOverlay = async () => {
+    await requestOverlayPermission();
+    await checkPermissionsStatus();
   };
 
   const contentPlatformStyle = Platform.select({
@@ -98,6 +103,31 @@ export default function HomeScreen() {
           </ThemedView>
         )}
 
+        {/* Overlay Permission Card */}
+        {Platform.OS === 'android' && hasOverlayPermission === false && (
+          <ThemedView type="backgroundElement" style={[styles.card, styles.syncCard, {
+            borderColor: 'rgba(255, 149, 0, 0.3)',
+            backgroundColor: 'rgba(255, 149, 0, 0.05)',
+          }]}>
+            <View style={[styles.syncIconContainer, { backgroundColor: 'rgba(255, 149, 0, 0.1)' }]}>
+              <Ionicons name="warning" size={28} color="#FF9500" />
+            </View>
+            <View style={styles.syncContent}>
+              <ThemedText type="subtitle">Enable Floating Overlay</ThemedText>
+              <ThemedText themeColor="textSecondary" style={styles.syncDesc}>
+                Allow Meendah to display the caller info overlay over other apps.
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#FF9500' }]}
+                onPress={handleRequestOverlay}
+              >
+                <Ionicons name="apps-outline" size={18} color="white" />
+                <ThemedText style={styles.syncButtonText}>Allow Overlay</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        )}
+
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="subtitle">{t('home.dashboard')}</ThemedText>
           <ThemedText themeColor="textSecondary">
@@ -113,13 +143,23 @@ export default function HomeScreen() {
               Test the incoming call overlay without waiting for a call.
             </ThemedText>
             <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity
-                style={[styles.syncButton, { backgroundColor: '#3c87f7', marginTop: 0, flex: 1 }]}
-                onPress={() => callDetection.testShowOverlay('+201012345678')}
-              >
-                <Ionicons name="call" size={18} color="white" />
-                <ThemedText style={styles.syncButtonText}>Show Overlay</ThemedText>
-              </TouchableOpacity>
+              {hasOverlayPermission === false ? (
+                <TouchableOpacity
+                  style={[styles.syncButton, { backgroundColor: '#FF9500', marginTop: 0, flex: 1 }]}
+                  onPress={handleRequestOverlay}
+                >
+                  <Ionicons name="apps-outline" size={18} color="white" />
+                  <ThemedText style={styles.syncButtonText}>Allow Overlay First</ThemedText>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.syncButton, { backgroundColor: '#3c87f7', marginTop: 0, flex: 1 }]}
+                  onPress={() => callDetection.testShowOverlay('+201012345678')}
+                >
+                  <Ionicons name="call" size={18} color="white" />
+                  <ThemedText style={styles.syncButtonText}>Show Overlay</ThemedText>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.syncButton, { backgroundColor: '#8E8E98', marginTop: 0, flex: 1 }]}
                 onPress={() => callDetection.testHideOverlay()}
