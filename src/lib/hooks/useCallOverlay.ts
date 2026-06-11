@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { callDetection } from '@/lib/native/callDetection';
 import { useAuthStore } from '@/lib/stores/authStore';
@@ -85,8 +85,27 @@ async function ensurePermissions(s: Strings) {
     if (!hasOverlay) {
       callDetection.requestOverlayPermission();
     }
+
+    // 4. طلب تعيين الـ app كـ default caller ID / screening app (Android 10+)
+    // ده الأهم — بدونه CallScreeningService مش بيشتغل خالص
+    await requestDefaultCallerIdApp();
   } catch (e) {
     if (__DEV__) console.warn('[CallOverlay] Permission check failed:', e);
+  }
+}
+
+/**
+ * يطلب من المستخدم تعيين Meendah كـ default caller ID app.
+ * ده مطلوب على Android 10+ عشان CallScreeningService يشتغل ويجيب رقم المتصل.
+ * بدون ده، الـ service مسجّل لكن مش بيتشغل.
+ */
+async function requestDefaultCallerIdApp() {
+  try {
+    const { CallDetectionModule } = NativeModules;
+    if (!CallDetectionModule?.requestDefaultCallerIdApp) return;
+    await CallDetectionModule.requestDefaultCallerIdApp();
+  } catch (e) {
+    if (__DEV__) console.warn('[CallOverlay] requestDefaultCallerIdApp failed:', e);
   }
 }
 
