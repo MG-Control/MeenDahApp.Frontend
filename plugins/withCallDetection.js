@@ -36,6 +36,16 @@ function withCallDetectionManifest(config) {
       "android.permission.WAKE_LOCK",
       "android.permission.READ_PHONE_NUMBERS",
       "android.permission.ANSWER_PHONE_CALLS",
+      "android.permission.READ_PHONE_STATE",
+      "android.permission.READ_CALL_LOG",
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_PHONE_CALL",
+      "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+      "android.permission.MANAGE_OWN_CALLS",
+      "android.permission.WAKE_LOCK",
+      "android.permission.READ_PHONE_NUMBERS",
+      "android.permission.ANSWER_PHONE_CALLS",
     ];
     if (!manifest['uses-permission']) manifest['uses-permission'] = [];
     const existingPerms = new Set(manifest['uses-permission'].map(p => p.$?.['android:name']));
@@ -56,10 +66,11 @@ function withCallDetectionManifest(config) {
           'android:name': '.calldetection.CallReceiver',
           'android:exported': 'true',
           'android:enabled': 'true',
+          'android:enabled': 'true',
         },
         'intent-filter': [
           {
-            $: { 'android:priority': 2147483647 },
+            $: { 'android:priority': 2147483647 }, // MAX PRIORITY - INTEGER NOT STRING!
             action: [
               { $: { 'android:name': 'android.intent.action.PHONE_STATE' } },
             ],
@@ -78,6 +89,9 @@ function withCallDetectionManifest(config) {
           'android:enabled': 'true',
           'android:stopWithTask': 'false',
           'android:directBootAware': 'true',
+          'android:enabled': 'true',
+          'android:stopWithTask': 'false', // Don't stop when app closes!
+          'android:directBootAware': 'true',
         },
       });
     }
@@ -88,6 +102,7 @@ function withCallDetectionManifest(config) {
         $: {
           'android:name': '.calldetection.MeenDahCallScreeningService',
           'android:exported': 'true',
+          'android:enabled': 'true',
           'android:enabled': 'true',
           'android:permission': 'android.permission.BIND_SCREENING_SERVICE',
         },
