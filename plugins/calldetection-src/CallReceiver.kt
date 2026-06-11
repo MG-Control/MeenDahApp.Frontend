@@ -55,16 +55,19 @@ class CallReceiver : BroadcastReceiver() {
             putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, number)
         }
         try {
+            // على Android 12+ لازم نستخدم startForegroundService بس ده بيفشل
+            // لو الـ app مش في الـ foreground — الحل هو إننا نستخدم
+            // FOREGROUND_SERVICE_TYPE_PHONE_CALL اللي مسموح بيها حتى من الـ background
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent)
-                Log.d(TAG, "startForegroundService OK")
             } else {
                 context.startService(serviceIntent)
-                Log.d(TAG, "startService OK")
             }
+            Log.d(TAG, "startService OK number=$number")
         } catch (e: Exception) {
             Log.e(TAG, "startService FAILED: ${e.message}", e)
-            showDebugNotification(context, "SERVICE FAILED: ${e.message}")
+            // Fallback: نعمل notification مباشرة بدل الـ overlay
+            showDebugNotification(context, "Incoming call: ${number.ifEmpty { "Unknown" }}")
         }
     }
 

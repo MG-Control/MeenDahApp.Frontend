@@ -38,6 +38,8 @@ function withCallDetectionManifest(config) {
       'android.permission.SYSTEM_ALERT_WINDOW',
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_DATA_SYNC',
+      'android.permission.FOREGROUND_SERVICE_PHONE_CALL',
+      'android.permission.MANAGE_OWN_CALLS',
     ];
 
     if (!manifest['uses-permission']) manifest['uses-permission'] = [];
@@ -82,7 +84,7 @@ function withCallDetectionManifest(config) {
       application.service.push({
         $: {
           'android:name': '.calldetection.CallOverlayService',
-          'android:foregroundServiceType': 'dataSync',
+          'android:foregroundServiceType': 'phoneCall|dataSync',
           'android:exported': 'false',
         },
       });
