@@ -61,8 +61,18 @@ class CallOverlayService : Service() {
                 val number = intent.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
                 Log.d(TAG, "ACTION_SHOW number=[$number]")
                 startAsForeground(number)
-                if (canDrawOverlays()) showOverlay(number)
-                else Log.w(TAG, "No SYSTEM_ALERT_WINDOW permission")
+                if (overlayView == null) {
+                    // Overlay not showing yet - create it
+                    if (canDrawOverlays()) {
+                        showOverlay(number)
+                    } else {
+                        Log.w(TAG, "No SYSTEM_ALERT_WINDOW permission")
+                    }
+                } else if (number.isNotEmpty()) {
+                    // Overlay already showing - update with the number
+                    Log.d(TAG, "Overlay already showing, updating with number=$number")
+                    updateOverlayPhoneNumber(number)
+                }
             }
             ACTION_HIDE -> {
                 Log.d(TAG, "ACTION_HIDE")
@@ -71,7 +81,7 @@ class CallOverlayService : Service() {
             }
             else -> stopSelf()
         }
-        return START_NOT_STICKY
+        return START_STICKY // Changed from START_NOT_STICKY to keep service alive
     }
 
     private fun startAsForeground(number: String) {
@@ -126,7 +136,15 @@ class CallOverlayService : Service() {
         }
         overlayParams = params
 
-        setupDragListener(view, params)
+        // Make the header draggable instead of the whole card
+        val card = (view as? LinearLayout)?.getChildAt(0) as? LinearLayout
+        val header = card?.getChildAt(0) as? LinearLayout
+        if (header != null) {
+            setupDragListener(view, header, params)
+        } else {
+            // Fallback to whole card if header not found
+            setupDragListener(view, card ?: view, params)
+        }
 
         try {
             windowManager?.addView(view, params)
@@ -143,33 +161,14 @@ class CallOverlayService : Service() {
         }
     }
 
-    private fun updateOverlayPhoneNumber(phoneNumber: String) {
-        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
-        // Update phone label (first child of infoColumn which is inside avatarContainer)
-        val avatarContainer = card.getChildAt(2) as? LinearLayout ?: return
-        val infoColumn = avatarContainer.getChildAt(1) as? LinearLayout ?: return
-        (infoColumn.getChildAt(0) as? TextView)?.text = formatPhoneNumber(phoneNumber)
-        (infoColumn.getChildAt(1) as? TextView)?.text = "Searching..."
-        val countryText = detectCountry(phoneNumber)
-        (infoColumn.getChildAt(2) as? TextView)?.apply {
-            text = countryText
-            visibility = if (countryText.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
-        }
-        showAvatarLoading(true)
-        fetchPhoneDetails(phoneNumber)
-    }
-
-    private fun setupDragListener(view: android.view.View, params: WindowManager.LayoutParams) {
+    private fun setupDragListener(containerView: android.view.View, dragView: android.view.View, params: WindowManager.LayoutParams) {
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        // الـ drag على الـ card (child)، لكن updateViewLayout على الـ view الأصلي (container)
-        val card = (view as? LinearLayout)?.getChildAt(0) ?: view
-
-        card.setOnTouchListener { _, event ->
+        dragView.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = params.x
@@ -177,7 +176,7 @@ class CallOverlayService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
-                    false // نرجع false عشان الـ click events توصل للأزرار
+                    true // نرجع true عشان نحفظ الـ event stream
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - initialTouchX).toInt()
@@ -188,8 +187,7 @@ class CallOverlayService : Service() {
                     if (isDragging) {
                         params.x = initialX + dx
                         params.y = initialY + dy
-                        // updateViewLayout على الـ view الأصلي (container) مش الـ card
-                        try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
+                        try { windowManager?.updateViewLayout(containerView, params) } catch (_: Exception) {}
                         true
                     } else {
                         false
@@ -203,6 +201,37 @@ class CallOverlayService : Service() {
                 else -> false
             }
         }
+    }
+
+    private fun updateOverlayPhoneNumber(phoneNumber: String) {
+        if (overlayView == null) return
+        
+        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
+        
+        // Update phone label
+        val phoneLabel = card.findViewWithTag<TextView>("phone_label")
+        if (phoneLabel != null) {
+            phoneLabel.text = formatPhoneNumber(phoneNumber)
+        } else {
+            // Fallback to finding by position if tag not set
+            val avatarContainer = card.getChildAt(2) as? LinearLayout ?: return
+            val infoColumn = avatarContainer.getChildAt(1) as? LinearLayout ?: return
+            (infoColumn.getChildAt(0) as? TextView)?.text = formatPhoneNumber(phoneNumber)
+        }
+        
+        // Update name label
+        updateNameLabel("Searching...")
+        
+        // Update country
+        val countryLabel = card.findViewWithTag<TextView>("country_label")
+        if (countryLabel != null) {
+            val countryText = detectCountry(phoneNumber)
+            countryLabel.text = countryText
+            countryLabel.visibility = if (countryText.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        
+        showAvatarLoading(true)
+        fetchPhoneDetails(phoneNumber)
     }
 
     private fun buildOverlayView(phoneNumber: String): LinearLayout {
@@ -285,6 +314,7 @@ class CallOverlayService : Service() {
             setTextColor(TEXT_WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            tag = "phone_label"
         }
 
         val nameLabel = TextView(this).apply {
