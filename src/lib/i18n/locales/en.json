@@ -139,7 +139,14 @@
     "birthdate": "Birthdate",
     "tagAdded": "Tag added successfully",
     "duplicateTag": "You already added this tag",
-    "allTagsAdded": "You have already added all available tags for this number"
+    "allTagsAdded": "You have already added all available tags for this number",
+    "blockConfirmTitle": "Block & Report",
+    "blockConfirmMessage": "Are you sure you want to block and report {{number}}?",
+    "unblockConfirmTitle": "Unblock",
+    "unblockConfirmMessage": "Are you sure you want to unblock {{number}}?",
+    "blockSuccess": "Number blocked successfully",
+    "unblockSuccess": "Number unblocked successfully",
+    "unblock": "Unblock"
   },
   "explore": {
     "title": "Explore",

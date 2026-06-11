@@ -139,7 +139,14 @@
     "birthdate": "تاريخ الميلاد",
     "tagAdded": "تمت إضافة الوسم بنجاح",
     "duplicateTag": "لقد أضفت هذا الوسم مسبقاً",
-    "allTagsAdded": "لقد أضفت جميع الوسوم المتاحة لهذا الرقم"
+    "allTagsAdded": "لقد أضفت جميع الوسوم المتاحة لهذا الرقم",
+    "blockConfirmTitle": "حظر وإبلاغ",
+    "blockConfirmMessage": "هل أنت متأكد أنك تريد حظر وإبلاغ {{number}}؟",
+    "unblockConfirmTitle": "إلغاء الحظر",
+    "unblockConfirmMessage": "هل أنت متأكد أنك تريد إلغاء حظر {{number}}؟",
+    "blockSuccess": "تم حظر الرقم بنجاح",
+    "unblockSuccess": "تم إلغاء حظر الرقم بنجاح",
+    "unblock": "إلغاء الحظر"
   },
   "home": {
     "dashboard": "لوحة التحكم",
