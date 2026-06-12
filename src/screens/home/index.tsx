@@ -29,6 +29,7 @@ export default function HomeScreen() {
     requestDefaultCallerId,
     requestOverlayPermission,
     requestIgnoreBatteryOptimizations,
+    openDefaultAppsSettings,
     checkPermissionsStatus
   } = useCallOverlay();
   const [isRequesting, setIsRequesting] = useState(false);
@@ -36,8 +37,15 @@ export default function HomeScreen() {
   const handleRequestDefault = async () => {
     setIsRequesting(true);
     await requestDefaultCallerId();
-    await checkPermissionsStatus();
-    setIsRequesting(false);
+    // ننتظر قليلاً ثم نحدث الحالة
+    setTimeout(async () => {
+      await checkPermissionsStatus();
+      setIsRequesting(false);
+    }, 1500);
+  };
+
+  const handleOpenSettings = () => {
+    openDefaultAppsSettings();
   };
 
   const handleRequestOverlay = async () => {
@@ -97,20 +105,30 @@ export default function HomeScreen() {
                   : 'Set Meendah as your default caller ID app to see who is calling.'}
               </ThemedText>
               {isDefaultCallerId === false && (
-                <TouchableOpacity
-                  style={[styles.syncButton, { backgroundColor: '#FF3B30' }]}
-                  onPress={handleRequestDefault}
-                  disabled={isRequesting}
-                >
-                  {isRequesting ? (
-                    <ActivityIndicator color="white" />
-                  ) : (
-                    <>
-                      <Ionicons name="shield-checkmark" size={18} color="white" />
-                      <ThemedText style={styles.syncButtonText}>Enable Now</ThemedText>
-                    </>
-                  )}
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.syncButton, { backgroundColor: '#FF3B30', flex: 1 }]}
+                    onPress={handleRequestDefault}
+                    disabled={isRequesting}
+                  >
+                    {isRequesting ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <>
+                        <Ionicons name="shield-checkmark" size={18} color="white" />
+                        <ThemedText style={styles.syncButtonText}>Enable Now</ThemedText>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.syncButton, { backgroundColor: '#8E8E98', flex: 0.8 }]}
+                    onPress={handleOpenSettings}
+                  >
+                    <Ionicons name="settings-outline" size={18} color="white" />
+                    <ThemedText style={styles.syncButtonText}>Settings</ThemedText>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </ThemedView>

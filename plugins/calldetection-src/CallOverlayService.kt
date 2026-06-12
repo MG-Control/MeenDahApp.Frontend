@@ -220,13 +220,22 @@ class CallOverlayService : Service() {
         
         val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
         
-        // Update phone label
+        // 1. Update phone label
         card.findViewWithTag<TextView>("phone_label")?.text = formatPhoneNumber(phoneNumber)
         
-        // Update name label
-        updateNameLabel("Searching...")
+        // 2. Check contacts immediately
+        val contactName = getContactName(phoneNumber)
+        card.findViewWithTag<TextView>("contact_info_label")?.apply {
+            text = if (contactName != null) "👤 Saved as: $contactName" else "🔍 Not in contacts"
+            visibility = android.view.View.VISIBLE
+        }
+
+        // 3. Reset database info and show loading
+        updateNameLabel("Searching MeenDah...")
+        card.findViewWithTag<TextView>("also_known_as_label")?.visibility = android.view.View.GONE
+        card.findViewWithTag<LinearLayout>("tags_row")?.visibility = android.view.View.GONE
         
-        // Update country
+        // 4. Update country
         card.findViewWithTag<TextView>("country_label")?.let {
             val countryText = detectCountry(phoneNumber)
             it.text = countryText
@@ -235,6 +244,25 @@ class CallOverlayService : Service() {
         
         showAvatarLoading(true)
         fetchPhoneDetails(phoneNumber)
+    }
+
+    private fun getContactName(number: String): String? {
+        try {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) 
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) return null
+                
+            val uri = android.net.Uri.withAppendedPath(
+                android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                android.net.Uri.encode(number)
+            )
+            val projection = arrayOf(android.provider.ContactsContract.PhoneLookup.DISPLAY_NAME)
+            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) return cursor.getString(0)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking contacts: ${e.message}")
+        }
+        return null
     }
 
     private fun buildOverlayView(phoneNumber: String): LinearLayout {
@@ -326,12 +354,34 @@ class CallOverlayService : Service() {
             } else {
                 "Searching..."
             }
-            setTextColor(TEXT_MUTED)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(TEXT_WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             tag = "name_label"
         }
+
+        val contactInfoLabel = TextView(this).apply {
+            tag = "contact_info_label"
+            setTextColor(TEXT_MUTED)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            visibility = android.view.View.GONE
+        }
+
+        val alsoKnownAsLabel = TextView(this).apply {
+            tag = "also_known_as_label"
+            setTextColor(BRAND_COLOR)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            visibility = android.view.View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(2) }
+        }
+
         infoColumn.addView(phoneLabel)
         infoColumn.addView(nameLabel)
+        infoColumn.addView(contactInfoLabel)
+        infoColumn.addView(alsoKnownAsLabel)
 
         // Country / operator hint
         val countryLabel = TextView(this).apply {
@@ -580,15 +630,18 @@ class CallOverlayService : Service() {
                 card.findViewWithTag<TextView>("name_label")?.let {
                     it.text = displayName
                     it.setTextColor(TEXT_WHITE)
-                    it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                    it.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                }
+
+                card.findViewWithTag<TextView>("also_known_as_label")?.let {
+                    it.text = "✨ Identified by MeenDah"
+                    it.visibility = android.view.View.VISIBLE
                 }
 
                 // Update avatar icon to show first letter
                 card.findViewWithTag<TextView>("avatar_icon")?.text =
                     displayName.first().toString().uppercase()
             } else {
-                updateNameLabel("Unknown - $totalSearches searches")
+                updateNameLabel("Unknown caller")
             }
 
             // Show spam badge
@@ -612,12 +665,12 @@ class CallOverlayService : Service() {
                 }
             }
 
-            // Show tags
+            // Show tags - up to 5
             if (tags != null && tags.length() > 0) {
                 val tagsRow = card.findViewWithTag<LinearLayout>("tags_row")
                 tagsRow?.removeAllViews()
                 tagsRow?.visibility = android.view.View.VISIBLE
-                for (i in 0 until minOf(tags.length(), 4)) {
+                for (i in 0 until minOf(tags.length(), 5)) {
                     val t = tags.getJSONObject(i).optString("text", "")
                     if (t.isEmpty()) continue
                     tagsRow?.addView(TextView(this).apply {

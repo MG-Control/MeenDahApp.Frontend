@@ -71,20 +71,39 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ — نستخدم RoleManager لطلب دور Call Screening
                 val roleManager = activity.getSystemService(RoleManager::class.java)
-                if (roleManager != null && !roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+                if (roleManager != null) {
+                    if (roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+                        promise.resolve(true)
+                        return
+                    }
                     val roleIntent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                     activity.startActivityForResult(roleIntent, REQUEST_ROLE_CODE)
+                    promise.resolve(true)
+                } else {
+                    promise.resolve(false)
                 }
-                promise.resolve(true)
             } else {
-                // Android 9 وأقل — بيعمل EXTRA_INCOMING_NUMBER لو READ_CALL_LOG موجودة
-                // مفيش حاجة نطلبها، الـ permission كافية
                 promise.resolve(true)
             }
         } catch (e: Exception) {
+            Log.e(TAG, "requestDefaultCallerIdApp error: ${e.message}")
             promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun openDefaultAppsSettings() {
+        try {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+            } else {
+                Intent(Settings.ACTION_SETTINGS)
+            }
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            reactApplicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not open settings: ${e.message}")
         }
     }
 
