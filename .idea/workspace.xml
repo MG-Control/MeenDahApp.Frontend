@@ -6,12 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="04919909-9a9a-43bc-af26-4a9b3b951505" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/calldetection-src/CallDetectionModule.kt" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/calldetection-src/CallDetectionModule.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/plugins/calldetection-src/CallOverlayService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/calldetection-src/CallOverlayService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/withCallDetection.js" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/withCallDetection.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib/hooks/useCallOverlay.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/hooks/useCallOverlay.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib/native/callDetection.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/native/callDetection.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/screens/home/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/screens/home/index.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,12 +19,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/elmagekmosaad/meendah.git",
-    "accountId": "0ab3b4f5-6b3b-4833-9cb2-e6e5e52154c1"
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "elmagekmosaad"
   }
 }]]></component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/elmagekmosaad/meendah.git&quot;,
+    &quot;accountId&quot;: &quot;0ab3b4f5-6b3b-4833-9cb2-e6e5e52154c1&quot;
+  }
+}</component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="ProjectErrors" />
   </component>
