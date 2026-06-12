@@ -89,6 +89,7 @@ export function useCallOverlay() {
     requestDefaultCallerId: callDetection.requestDefaultCallerIdApp,
     requestOverlayPermission: callDetection.requestOverlayPermission,
     requestIgnoreBatteryOptimizations: callDetection.requestIgnoreBatteryOptimizations,
+    openDefaultAppsSettings: callDetection.openDefaultAppsSettings,
     checkPermissionsStatus,
   };
 }
