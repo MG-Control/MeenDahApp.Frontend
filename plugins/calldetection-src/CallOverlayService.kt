@@ -27,23 +27,53 @@ class CallOverlayService : Service() {
         const val ACTION_HIDE  = "com.meendah.app.HIDE_OVERLAY"
         const val EXTRA_PHONE_NUMBER = "phone_number"
         const val CHANNEL_ID      = "meendah_call_channel"
+        const val PERSISTENT_CHANNEL_ID = "meendah_persistent_channel"
         const val NOTIFICATION_ID = 7331
+        const val PERSISTENT_NOTIFICATION_ID = 7332
         const val PREFS_NAME  = "meendah_call_prefs"
         const val PREF_TOKEN  = "auth_token"
         const val PREF_BASE_URL = "base_url"
+        const val PREF_THEME = "theme"
+        const val PREF_VERSION = "version"
     }
 
     // Brand colors
     private val BRAND_COLOR = Color.parseColor("#208AEF")
+
+    // Dark theme
     private val BG_DARK = Color.parseColor("#1C1C2E")
-    private val TEXT_MUTED = Color.parseColor("#8E8E98")
-    private val TEXT_WHITE = Color.WHITE
-    private val DIVIDER_COLOR = Color.parseColor("#2E2E4A")
+    private val TEXT_MUTED_DARK = Color.parseColor("#8E8E98")
+    private val TEXT_WHITE_DARK = Color.WHITE
+    private val DIVIDER_COLOR_DARK = Color.parseColor("#2E2E4A")
+
+    // Light theme
+    private val BG_LIGHT = Color.parseColor("#FFFFFF")
+    private val TEXT_MUTED_LIGHT = Color.parseColor("#60646C")
+    private val TEXT_BLACK_LIGHT = Color.BLACK
+    private val DIVIDER_COLOR_LIGHT = Color.parseColor("#E0E1E6")
 
     private var windowManager: WindowManager? = null
     private var overlayView: android.view.View? = null
     private var overlayParams: WindowManager.LayoutParams? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    private fun isDarkTheme(): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val theme = prefs.getString(PREF_THEME, "dark") ?: "dark"
+        return theme == "dark"
+    }
+
+    private val bgColor: Int
+        get() = if (isDarkTheme()) BG_DARK else BG_LIGHT
+
+    private val textPrimary: Int
+        get() = if (isDarkTheme()) TEXT_WHITE_DARK else TEXT_BLACK_LIGHT
+
+    private val textSecondary: Int
+        get() = if (isDarkTheme()) TEXT_MUTED_DARK else TEXT_MUTED_LIGHT
+
+    private val dividerColor: Int
+        get() = if (isDarkTheme()) DIVIDER_COLOR_DARK else DIVIDER_COLOR_LIGHT
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -59,11 +89,23 @@ class CallOverlayService : Service() {
         val number = intent?.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
         Log.d(TAG, "onStartCommand action=$action number=[$number]")
 
-        // Always ensure foreground status immediately
-        startAsForeground(number)
-
         when (action) {
+            "OPEN_SETTINGS" -> {
+            // Open the app's default apps settings
+            val openSettingsIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                setPackage(packageName)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                startActivity(openSettingsIntent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to open app", e)
+            }
+        }
             ACTION_SHOW -> {
+                // Always ensure foreground status immediately
+                startAsForeground(number)
                 val canDraw = canDrawOverlays()
                 Log.d(TAG, "Can draw overlays: $canDraw")
                 if (overlayView == null) {
@@ -276,7 +318,7 @@ class CallOverlayService : Service() {
             setPadding(dp(20), dp(18), dp(20), dp(18))
             elevation = 12f * resources.displayMetrics.density
             background = GradientDrawable().apply {
-                setColor(BG_DARK)
+                setColor(bgColor)
                 cornerRadius = dp(20).toFloat()
             }
         }
@@ -297,7 +339,7 @@ class CallOverlayService : Service() {
 
         val dismissBtn = TextView(this).apply {
             text = "✕"
-            setTextColor(TEXT_MUTED)
+            setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             setPadding(dp(6), dp(2), dp(6), dp(2))
             setOnClickListener { dismissOverlay(); stopSelf() }
@@ -306,7 +348,7 @@ class CallOverlayService : Service() {
         headerRow.addView(dismissBtn)
 
         val divider = android.view.View(this).apply {
-            setBackgroundColor(DIVIDER_COLOR)
+            setBackgroundColor(dividerColor)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
             ).apply { topMargin = dp(10); bottomMargin = dp(12) }
@@ -338,7 +380,7 @@ class CallOverlayService : Service() {
 
         val phoneLabel = TextView(this).apply {
             text = if (phoneNumber.isNotEmpty()) formatPhoneNumber(phoneNumber) else ""
-            setTextColor(TEXT_MUTED)
+            setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             tag = "phone_label"
         }
@@ -349,7 +391,7 @@ class CallOverlayService : Service() {
             } else {
                 "Searching..."
             }
-            setTextColor(TEXT_WHITE)
+            setTextColor(textPrimary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             tag = "name_label"
@@ -357,7 +399,7 @@ class CallOverlayService : Service() {
 
         val contactInfoLabel = TextView(this).apply {
             tag = "contact_info_label"
-            setTextColor(TEXT_MUTED)
+            setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             visibility = android.view.View.GONE
         }
@@ -382,7 +424,7 @@ class CallOverlayService : Service() {
         val countryLabel = TextView(this).apply {
             tag = "country_label"
             text = if (phoneNumber.isNotEmpty()) detectCountry(phoneNumber) else ""
-            setTextColor(TEXT_MUTED)
+            setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             visibility = if (phoneNumber.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
         }
@@ -414,12 +456,27 @@ class CallOverlayService : Service() {
             ).apply { topMargin = dp(8) }
         }
 
+        // ── Version Label ──
+        val versionLabel = TextView(this).apply {
+            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val version = prefs.getString(PREF_VERSION, "1.0.0") ?: "1.0.0"
+            text = "v$version"
+            setTextColor(textSecondary)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+            gravity = Gravity.CENTER
+        }
+
         // ── Assemble card ──
         card.addView(headerRow)
         card.addView(divider)
         card.addView(avatarContainer)
         card.addView(spamBadge)
         card.addView(tagsRow)
+        card.addView(versionLabel)
 
         container.addView(card)
         return container
@@ -624,7 +681,7 @@ class CallOverlayService : Service() {
             if (displayName.isNotEmpty()) {
                 card.findViewWithTag<TextView>("name_label")?.let {
                     it.text = displayName
-                    it.setTextColor(TEXT_WHITE)
+                    it.setTextColor(textPrimary)
                 }
 
                 card.findViewWithTag<TextView>("also_known_as_label")?.let {
@@ -695,7 +752,7 @@ class CallOverlayService : Service() {
         val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
         card.findViewWithTag<TextView>("name_label")?.let {
             it.text = text
-            it.setTextColor(TEXT_MUTED)
+            it.setTextColor(textSecondary)
             it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         }
     }
@@ -712,9 +769,19 @@ class CallOverlayService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Caller info channel
             (getSystemService(NotificationManager::class.java)).createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Caller Info", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Shows incoming call information"
+                    setSound(null, null)
+                    enableVibration(false)
+                }
+            )
+
+            // Persistent setup channel
+            (getSystemService(NotificationManager::class.java)).createNotificationChannel(
+                NotificationChannel(PERSISTENT_CHANNEL_ID, "Setup Reminder", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Reminds you to set Meendah as default caller ID app"
                     setSound(null, null)
                     enableVibration(false)
                 }

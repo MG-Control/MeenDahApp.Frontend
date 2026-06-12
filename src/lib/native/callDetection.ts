@@ -23,6 +23,18 @@ export const callDetection = {
     }
   },
 
+  setTheme(theme: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.setTheme(theme);
+    }
+  },
+
+  setVersion(version: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.setVersion(version);
+    }
+  },
+
   async hasOverlayPermission(): Promise<boolean> {
     if (!isAndroid || !CallDetectionModule) return false;
     return CallDetectionModule.hasOverlayPermission();
@@ -71,6 +83,18 @@ export const callDetection = {
   testHideOverlay() {
     if (isAndroid && CallDetectionModule) {
       CallDetectionModule.testHideOverlay();
+    }
+  },
+
+  showPersistentNotification() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.showPersistentNotification();
+    }
+  },
+
+  hidePersistentNotification() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.hidePersistentNotification();
     }
   },
 };

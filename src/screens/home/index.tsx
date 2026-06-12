@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, Platform, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -17,6 +19,7 @@ import { styles } from './styles';
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -32,6 +35,16 @@ export default function HomeScreen() {
     openDefaultAppsSettings,
     checkPermissionsStatus
   } = useCallOverlay();
+
+  // Set theme and version in native module
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
+      callDetection.setTheme(appTheme);
+      const version = Constants.expoConfig?.version || '1.0.0';
+      callDetection.setVersion(version);
+    }
+  }, [colorScheme]);
   const [isRequesting, setIsRequesting] = useState(false);
 
   const handleRequestDefault = async () => {
@@ -254,6 +267,11 @@ export default function HomeScreen() {
             </View>
           </ThemedView>
         )}
+
+        {/* Version Number */}
+        <ThemedText themeColor="textSecondary" style={{ textAlign: 'center', marginTop: Spacing.four, fontSize: 12 }}>
+          Version {Constants.expoConfig?.version || '1.0.0'}
+        </ThemedText>
       </ThemedView>
     </ScrollView>
   );
