@@ -100,6 +100,7 @@ function withCallDetectionManifest(config) {
         'intent-filter': [
           {
             action: [{ $: { 'android:name': 'android.telecom.CallScreeningService' } }],
+            category: [{ $: { 'android:name': 'android.intent.category.DEFAULT' } }],
           },
         ],
       });

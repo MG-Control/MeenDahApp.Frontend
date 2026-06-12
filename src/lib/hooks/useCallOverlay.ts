@@ -82,6 +82,18 @@ export function useCallOverlay() {
     };
   }, []);
 
+  // Show/hide persistent notification based on whether we're the default caller ID
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (!_hasHydrated || !accessToken) return;
+
+    if (isDefaultCallerId === false) {
+      callDetection.showPersistentNotification();
+    } else {
+      callDetection.hidePersistentNotification();
+    }
+  }, [isDefaultCallerId, _hasHydrated, accessToken]);
+
   return {
     isDefaultCallerId,
     hasOverlayPermission,

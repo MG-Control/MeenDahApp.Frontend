@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.facebook.react.bridge.*
 
 class CallDetectionModule(reactContext: ReactApplicationContext) :
@@ -35,9 +37,20 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun setTheme(theme: String) {
+        prefs().edit().putString(CallOverlayService.PREF_THEME, theme).apply()
+    }
+
+    @ReactMethod
+    fun setVersion(version: String) {
+        prefs().edit().putString(CallOverlayService.PREF_VERSION, version).apply()
+    }
+
+    @ReactMethod
     fun hasOverlayPermission(promise: Promise) {
         val result = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
                 Settings.canDrawOverlays(reactApplicationContext)
+        Log.d(TAG, "hasOverlayPermission: $result, SDK: ${Build.VERSION.SDK_INT}")
         promise.resolve(result)
     }
 
@@ -192,6 +205,47 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
             reactApplicationContext.startService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "[CallDetectionModule] test hide failed: ${e.message}", e)
+        }
+    }
+
+    @ReactMethod
+    fun showPersistentNotification() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        // Create intent to open the app's settings/default caller ID screen
+        val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
+            action = "OPEN_SETTINGS"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val pi = android.app.PendingIntent.getService(
+            reactApplicationContext, 0, intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(reactApplicationContext, CallOverlayService.PERSISTENT_CHANNEL_ID)
+            .setContentTitle("Set Meendah as Default Caller ID")
+            .setContentText("Tap to set Meendah as your default caller ID & spam app")
+            .setSmallIcon(android.R.drawable.sym_call_incoming)
+            .setContentIntent(pi)
+            .setOngoing(true) // Persistent notification
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(reactApplicationContext)
+                .notify(CallOverlayService.PERSISTENT_NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show persistent notification", e)
+        }
+    }
+
+    @ReactMethod
+    fun hidePersistentNotification() {
+        try {
+            NotificationManagerCompat.from(reactApplicationContext)
+                .cancel(CallOverlayService.PERSISTENT_NOTIFICATION_ID)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to hide persistent notification", e)
         }
     }
 
