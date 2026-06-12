@@ -28,6 +28,7 @@ function withCallDetectionManifest(config) {
     const requiredPermissions = [
       "android.permission.READ_PHONE_STATE",
       "android.permission.READ_CALL_LOG",
+      "android.permission.READ_CONTACTS",
       "android.permission.SYSTEM_ALERT_WINDOW",
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_PHONE_CALL",

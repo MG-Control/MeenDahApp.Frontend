@@ -44,6 +44,12 @@ export const callDetection = {
     return CallDetectionModule.requestDefaultCallerIdApp();
   },
 
+  openDefaultAppsSettings() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openDefaultAppsSettings();
+    }
+  },
+
   async isIgnoringBatteryOptimizations(): Promise<boolean> {
     if (!isAndroid || !CallDetectionModule) return true;
     return CallDetectionModule.isIgnoringBatteryOptimizations();
