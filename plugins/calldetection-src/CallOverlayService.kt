@@ -336,6 +336,13 @@ class CallOverlayService : Service() {
             ).apply { marginStart = dp(14) }
         }
 
+        val phoneLabel = TextView(this).apply {
+            text = if (phoneNumber.isNotEmpty()) formatPhoneNumber(phoneNumber) else ""
+            setTextColor(TEXT_MUTED)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            tag = "phone_label"
+        }
+
         val nameLabel = TextView(this).apply {
             text = if (phoneNumber.isEmpty()) {
                 "Identifying caller..."
