@@ -91,18 +91,18 @@ class CallOverlayService : Service() {
 
         when (action) {
             "OPEN_SETTINGS" -> {
-            // Open the app's default apps settings
-            val openSettingsIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-                setPackage(packageName)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                // Open the app's default apps settings
+                val openSettingsIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setPackage(packageName)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    startActivity(openSettingsIntent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to open app", e)
+                }
             }
-            try {
-                startActivity(openSettingsIntent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to open app", e)
-            }
-        }
             ACTION_SHOW -> {
                 // Always ensure foreground status immediately
                 startAsForeground(number)
