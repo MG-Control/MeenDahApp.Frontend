@@ -119,6 +119,14 @@ async function ensurePermissions(s: Strings) {
   try {
     if (__DEV__) console.log('[CallOverlay] Starting permission request flow...');
 
+    // 0. POST_NOTIFICATIONS — required for notifications on Android 13+
+    if (__DEV__) console.log('[CallOverlay] Requesting POST_NOTIFICATIONS...');
+    await requestIfNeeded(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      { title: 'Allow notifications', message: 'Allow Meendah to show setup notifications',
+        buttonPositive: s.allow, buttonNegative: s.notNow }
+    );
+
     // 1. READ_PHONE_STATE — required on all Android versions
     if (__DEV__) console.log('[CallOverlay] Requesting READ_PHONE_STATE...');
     const phoneStateGranted = await requestIfNeeded(

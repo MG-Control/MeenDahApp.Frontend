@@ -210,30 +210,16 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun showPersistentNotification() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
-        // Create intent to open the app's settings/default caller ID screen
-        val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
-            action = "OPEN_SETTINGS"
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        val pi = android.app.PendingIntent.getService(
-            reactApplicationContext, 0, intent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(reactApplicationContext, CallOverlayService.PERSISTENT_CHANNEL_ID)
-            .setContentTitle("Set Meendah as Default Caller ID")
-            .setContentText("Tap to set Meendah as your default caller ID & spam app")
-            .setSmallIcon(android.R.drawable.sym_call_incoming)
-            .setContentIntent(pi)
-            .setOngoing(true) // Persistent notification
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-
+        Log.d(TAG, "showPersistentNotification called")
         try {
-            NotificationManagerCompat.from(reactApplicationContext)
-                .notify(CallOverlayService.PERSISTENT_NOTIFICATION_ID, notification)
+            val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
+                action = CallOverlayService.ACTION_SHOW_SETUP_NOTIFICATION
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                reactApplicationContext.startForegroundService(intent)
+            } else {
+                reactApplicationContext.startService(intent)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show persistent notification", e)
         }
@@ -241,9 +227,12 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun hidePersistentNotification() {
+        Log.d(TAG, "hidePersistentNotification called")
         try {
-            NotificationManagerCompat.from(reactApplicationContext)
-                .cancel(CallOverlayService.PERSISTENT_NOTIFICATION_ID)
+            val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
+                action = CallOverlayService.ACTION_HIDE_SETUP_NOTIFICATION
+            }
+            reactApplicationContext.startService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to hide persistent notification", e)
         }
