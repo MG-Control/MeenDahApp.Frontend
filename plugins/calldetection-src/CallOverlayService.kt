@@ -25,6 +25,8 @@ class CallOverlayService : Service() {
         private const val TAG = "MeenDah"
         const val ACTION_SHOW = "com.meendah.app.SHOW_OVERLAY"
         const val ACTION_HIDE  = "com.meendah.app.HIDE_OVERLAY"
+        const val ACTION_SHOW_SETUP_NOTIFICATION  = "com.meendah.app.SHOW_SETUP_NOTIFICATION"
+        const val ACTION_HIDE_SETUP_NOTIFICATION  = "com.meendah.app.HIDE_SETUP_NOTIFICATION"
         const val EXTRA_PHONE_NUMBER = "phone_number"
         const val CHANNEL_ID      = "meendah_call_channel"
         const val PERSISTENT_CHANNEL_ID = "meendah_persistent_channel"
@@ -120,6 +122,13 @@ class CallOverlayService : Service() {
             }
             ACTION_HIDE -> {
                 dismissOverlay()
+                stopSelf()
+            }
+            ACTION_SHOW_SETUP_NOTIFICATION -> {
+                startForeground(PERSISTENT_NOTIFICATION_ID, buildSetupNotification())
+            }
+            ACTION_HIDE_SETUP_NOTIFICATION -> {
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
             else -> {
@@ -799,6 +808,22 @@ class CallOverlayService : Service() {
             .setContentText(if (phoneNumber.isEmpty()) "Looking up caller..." else "Looking up $phoneNumber...")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentIntent(pi)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+    }
+
+    private fun buildSetupNotification(): Notification {
+        val pi = PendingIntent.getActivity(
+            this, 0, packageManager.getLaunchIntentForPackage(packageName),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(this, PERSISTENT_CHANNEL_ID)
+            .setContentTitle("Set Meendah as Default Caller ID")
+            .setContentText("Tap to set Meendah as your default caller ID & spam app")
+            .setSmallIcon(android.R.drawable.sym_call_incoming)
+            .setContentIntent(pi)
+            .setOngoing(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()

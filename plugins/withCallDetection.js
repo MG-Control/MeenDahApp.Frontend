@@ -38,7 +38,8 @@ function withCallDetectionManifest(config) {
       "android.permission.READ_PHONE_NUMBERS",
       "android.permission.ANSWER_PHONE_CALLS",
       "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
-      "android.permission.RECEIVE_BOOT_COMPLETED"
+      "android.permission.RECEIVE_BOOT_COMPLETED",
+      "android.permission.POST_NOTIFICATIONS"
     ];
     if (!manifest['uses-permission']) manifest['uses-permission'] = [];
     const existingPerms = new Set(manifest['uses-permission'].map(p => p.$?.['android:name']));
