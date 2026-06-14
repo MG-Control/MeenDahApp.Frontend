@@ -524,6 +524,19 @@ class CallOverlayService : Service() {
             ).apply { topMargin = dp(8) }
         }
 
+        // ── Debug token label (hidden by default) ──
+        val tokenDebugLabel = TextView(this).apply {
+            tag = "token_debug_label"
+            setTextColor(Color.parseColor("#FF3B30")) // Red color for visibility
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+            visibility = android.view.View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(4) }
+            gravity = Gravity.CENTER
+        }
+
         // ── Version Label ──
         val versionLabel = TextView(this).apply {
             val version = getVersionLabel()
@@ -543,6 +556,7 @@ class CallOverlayService : Service() {
         card.addView(avatarContainer)
         card.addView(spamBadge)
         card.addView(tagsRow)
+        card.addView(tokenDebugLabel)
         card.addView(versionLabel)
 
         container.addView(card)
@@ -698,9 +712,26 @@ class CallOverlayService : Service() {
         val token = prefs.getString(PREF_TOKEN, null)
         val baseUrl = prefs.getString(PREF_BASE_URL, "https://meendah.mg-control.com")?.trimEnd('/') ?: "https://meendah.mg-control.com"
 
+        // Debug: log token status and show in overlay
+        val tokenPreview = if (token.isNullOrEmpty()) {
+            "NO_TOKEN"
+        } else {
+            // Show first 10 chars + last 4 chars for debugging
+            val first = token.take(10)
+            val last = token.takeLast(4)
+            "${first}...${last} (len=${token.length})"
+        }
+        Log.d(TAG, "fetchPhoneDetails: token=$tokenPreview, baseUrl=$baseUrl")
+        
         if (token.isNullOrEmpty()) {
             showAvatarLoading(false)
             updateNameLabel("Sign in to see caller info")
+            // Show debug info in a secondary label
+            val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout
+            card?.findViewWithTag<TextView>("token_debug_label")?.let {
+                it.text = "Token: $tokenPreview | URL: $baseUrl"
+                it.visibility = android.view.View.VISIBLE
+            }
             return
         }
 
@@ -730,6 +761,12 @@ class CallOverlayService : Service() {
             } catch (e: Exception) {
                 Log.e(TAG, "fetch error: ${e.message}")
                 showAvatarLoading(false)
+                // Show error in overlay with debug info
+                val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout
+                card?.findViewWithTag<TextView>("token_debug_label")?.let {
+                    it.text = "Error: ${e.message} | Token: $tokenPreview"
+                    it.visibility = android.view.View.VISIBLE
+                }
                 updateNameLabel("Could not fetch caller info")
             }
         }

@@ -14,6 +14,7 @@ const BASE_URL = (
 
 interface PermissionsState {
   hasPostNotifications: boolean | null;
+  hasReadContacts: boolean | null;
   hasReadPhoneState: boolean | null;
   hasReadCallLog: boolean | null;
   hasReadPhoneNumbers: boolean | null;
@@ -30,6 +31,7 @@ export function useCallOverlay() {
   const permissionsRequested = useRef(false);
   const [permissions, setPermissions] = useState<PermissionsState>({
     hasPostNotifications: null,
+    hasReadContacts: null,
     hasReadPhoneState: null,
     hasReadCallLog: null,
     hasReadPhoneNumbers: null,
@@ -66,8 +68,12 @@ export function useCallOverlay() {
       console.log('  isIgnoringBattery:', isIgnoringBattery);
     }
 
+    // Check contacts permission
+    const hasReadContacts = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_CONTACTS);
+
     setPermissions({
       hasPostNotifications,
+      hasReadContacts,
       hasReadPhoneState,
       hasReadCallLog,
       hasReadPhoneNumbers,
@@ -257,6 +263,14 @@ async function ensurePermissions(s: Strings) {
     await requestIfNeeded(
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       { title: 'Allow notifications', message: 'Allow Meendah to show setup notifications',
+        buttonPositive: s.allow, buttonNegative: s.notNow }
+    );
+
+    // 0.5. READ_CONTACTS — required to show contact names in overlay
+    if (__DEV__) console.log('[CallOverlay] Requesting READ_CONTACTS...');
+    await requestIfNeeded(
+      PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+      { title: 'Allow Contacts', message: 'Allow Meendah to access your contacts to identify saved callers.',
         buttonPositive: s.allow, buttonNegative: s.notNow }
     );
 

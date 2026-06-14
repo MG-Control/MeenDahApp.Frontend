@@ -112,63 +112,67 @@ class CallDetectionModule(
                 Log.w(TAG, "hasOverlayPermission: check1 failed: ${e.message}")
                 false
             }
+            if (check1) {
+                Log.d(TAG, "hasOverlayPermission: check1 PASSED -> returning true")
+                promise.resolve(true)
+                return
+            }
             
             // Check 2: Check via current activity if available
             val check2 = try {
                 val activity = context.currentActivity
-                if (activity != null) Settings.canDrawOverlays(activity) else check1
+                if (activity != null) {
+                    val canDraw = Settings.canDrawOverlays(activity)
+                    if (canDraw) {
+                        Log.d(TAG, "hasOverlayPermission: check2 PASSED (via activity) -> returning true")
+                        promise.resolve(true)
+                        return
+                    }
+                }
+                false
             } catch (e: Exception) {
                 Log.w(TAG, "hasOverlayPermission: check2 failed: ${e.message}")
                 false
             }
             
-            // Check 3: Use AppOpsManager to check SYSTEM_ALERT_WINDOW (most reliable on newer Android)
-            val check3 = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val appOps = context.getSystemService(android.app.AppOpsManager::class.java)
-                    val mode = appOps?.noteOpNoThrow(
-                        android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
-                        android.os.Process.myUid(),
-                        context.packageName
-                    )
-                    mode == android.app.AppOpsManager.MODE_ALLOWED
-                } else {
-                    // On older Android, try via Settings.canDrawOverlays again but with Application context
-                    Settings.canDrawOverlays(context.applicationContext)
+            // Check 3: Use AppOpsManager to check SYSTEM_ALERT_WINDOW (MOST reliable)
+            try {
+                val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+                val mode = appOps.checkOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+                if (mode == android.app.AppOpsManager.MODE_ALLOWED || mode == android.app.AppOpsManager.MODE_DEFAULT) {
+                    Log.d(TAG, "hasOverlayPermission: check3 (AppOps) PASSED = $mode -> returning true")
+                    promise.resolve(true)
+                    return
                 }
+                Log.d(TAG, "hasOverlayPermission: check3 (AppOps) mode=$mode")
             } catch (e: Exception) {
                 Log.w(TAG, "hasOverlayPermission: check3 failed: ${e.message}")
-                false
             }
 
-            // Check 4: Last resort - try to actually add a test view (the most definitive check)
-            val check4 = try {
-                val wm = context.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager
-                if (wm != null) {
-                    val testView = android.view.View(context)
-                    val testParams = android.view.WindowManager.LayoutParams(
-                        1, 1,
-                        android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                        android.graphics.PixelFormat.TRANSLUCENT
+            // Check 4: Try via PackageManager (check if permission is registered as granted)
+            try {
+                val pm = context.packageManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val permInfo = pm.checkPermission(
+                        android.Manifest.permission.SYSTEM_ALERT_WINDOW,
+                        context.packageName
                     )
-                    try {
-                        wm.addView(testView, testParams)
-                        wm.removeView(testView)
-                        true
-                    } catch (e: Exception) {
-                        Log.w(TAG, "hasOverlayPermission: check4 (addView test) failed: ${e.message}")
-                        false
+                    if (permInfo == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "hasOverlayPermission: check4 (PackageManager) PASSED -> returning true")
+                        promise.resolve(true)
+                        return
                     }
-                } else false
+                }
             } catch (e: Exception) {
-                Log.w(TAG, "hasOverlayPermission: check4 exception: ${e.message}")
-                false
+                Log.w(TAG, "hasOverlayPermission: check4 failed: ${e.message}")
             }
-            
-            val result = check1 || check2 || check3 || check4
-            Log.d(TAG, "hasOverlayPermission: check1=$check1, check2=$check2, check3=$check3, check4=$check4, final=$result")
-            promise.resolve(result)
+
+            Log.d(TAG, "hasOverlayPermission: ALL CHECKS FAILED, returning false")
+            promise.resolve(false)
         } catch (e: Exception) {
             Log.e(TAG, "hasOverlayPermission: exception: ${e.message}", e)
             promise.resolve(false)
@@ -184,19 +188,36 @@ class CallDetectionModule(
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Always try to open overlay settings when user explicitly taps the button.
-            // Even if Settings.canDrawOverlays() thinks it's granted, there could be a
-            // known Android bug where it returns false incorrectly after a reboot.
+            // Try multiple ways to open overlay settings:
+            
+            // Method 1: ACTION_MANAGE_OVERLAY_PERMISSION with package URI
             try {
                 val intent = Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:${activity.packageName}")
                 ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-                Log.d(TAG, "requestOverlayPermission: opening overlay settings")
+                Log.d(TAG, "requestOverlayPermission: opening overlay settings (method 1)")
                 activity.startActivity(intent)
+                return
             } catch (e: Exception) {
-                Log.e(TAG, "requestOverlayPermission: ACTION_MANAGE_OVERLAY_PERMISSION failed, opening app details instead", e)
-                openAppDetailsSettings()
+                Log.w(TAG, "requestOverlayPermission: method 1 failed: ${e.message}")
             }
+            
+            // Method 2: Try without URI (some OEMs like Xiaomi, Huawei need this)
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                Log.d(TAG, "requestOverlayPermission: opening overlay settings (method 2)")
+                activity.startActivity(intent)
+                return
+            } catch (e: Exception) {
+                Log.w(TAG, "requestOverlayPermission: method 2 failed: ${e.message}")
+            }
+            
+            // Method 3: Open app details settings as last resort
+            Log.e(TAG, "requestOverlayPermission: all methods failed, opening app details settings")
+            openAppDetailsSettings()
         } else {
             Log.d(TAG, "requestOverlayPermission: SDK < M, opening app details settings")
             openAppDetailsSettings()
