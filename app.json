@@ -2,7 +2,7 @@
   "expo": {
     "name": "meendah",
     "slug": "meendah",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/logo/meendah_english_light.png",
     "scheme": "meendah",

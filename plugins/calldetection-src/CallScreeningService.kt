@@ -66,11 +66,22 @@ class MeenDahCallScreeningService : CallScreeningService() {
         phoneNumber = phoneNumber.trim()
         Log.d(TAG, "[CallScreening] Final phoneNumber: $phoneNumber")
 
-        // 2. Start Overlay Service
-        // Note: CallScreeningService is allowed to start a foreground service during the call.
+        // Read auth token and base URL from SharedPreferences to pass to overlay service
+        val prefs = getSharedPreferences(CallOverlayService.PREFS_NAME, MODE_PRIVATE)
+        val authToken = prefs.getString(CallOverlayService.PREF_TOKEN, null)
+        val baseUrl = prefs.getString(CallOverlayService.PREF_BASE_URL, null)
+        Log.d(TAG, "[CallScreening] Token available: ${!authToken.isNullOrEmpty()}, baseUrl: ${!baseUrl.isNullOrEmpty()}")
+
+        // 2. Start Overlay Service with token and baseUrl as extras
         val intent = Intent(this, CallOverlayService::class.java).apply {
             action = CallOverlayService.ACTION_SHOW
             putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, phoneNumber)
+            if (!authToken.isNullOrEmpty()) {
+                putExtra(CallOverlayService.EXTRA_AUTH_TOKEN, authToken)
+            }
+            if (!baseUrl.isNullOrEmpty()) {
+                putExtra(CallOverlayService.EXTRA_BASE_URL, baseUrl)
+            }
             // Essential flags for background start
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

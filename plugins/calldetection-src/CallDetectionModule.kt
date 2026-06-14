@@ -83,6 +83,18 @@ class CallDetectionModule(
     }
 
     @ReactMethod
+    fun setRefreshToken(refreshToken: String) {
+        Log.d(TAG, "setRefreshToken called")
+        prefs().edit().putString("auth_refresh_token", refreshToken).apply()
+    }
+
+    @ReactMethod
+    fun clearRefreshToken() {
+        Log.d(TAG, "clearRefreshToken called")
+        prefs().edit().remove("auth_refresh_token").apply()
+    }
+
+    @ReactMethod
     fun hasOverlayPermission(promise: Promise) {
         try {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
@@ -91,33 +103,71 @@ class CallDetectionModule(
                 return
             }
 
-            val activity = reactApplicationContext.currentActivity
-            val context = activity ?: reactApplicationContext
+            val context = reactApplicationContext
             
-            // Try multiple checks to work around Android bug where Settings.canDrawOverlays()
-            // returns false even after permission is granted
-            val check1 = Settings.canDrawOverlays(context)
-            val check2 = if (activity != null) {
-                try {
-                    Settings.canDrawOverlays(activity)
-                } catch (e: Exception) {
-                    Log.w(TAG, "hasOverlayPermission: check2 failed: ${e.message}")
-                    false
-                }
-            } else {
-                check1
+            // Check 1: Standard Settings.canDrawOverlays check
+            val check1 = try {
+                Settings.canDrawOverlays(context)
+            } catch (e: Exception) {
+                Log.w(TAG, "hasOverlayPermission: check1 failed: ${e.message}")
+                false
             }
             
-            // Try alternative check via PackageManager (more reliable)
+            // Check 2: Check via current activity if available
+            val check2 = try {
+                val activity = context.currentActivity
+                if (activity != null) Settings.canDrawOverlays(activity) else check1
+            } catch (e: Exception) {
+                Log.w(TAG, "hasOverlayPermission: check2 failed: ${e.message}")
+                false
+            }
+            
+            // Check 3: Use AppOpsManager to check SYSTEM_ALERT_WINDOW (most reliable on newer Android)
             val check3 = try {
-                context.checkSelfPermission("android.permission.SYSTEM_ALERT_WINDOW") == android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val appOps = context.getSystemService(android.app.AppOpsManager::class.java)
+                    val mode = appOps?.noteOpNoThrow(
+                        android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                        android.os.Process.myUid(),
+                        context.packageName
+                    )
+                    mode == android.app.AppOpsManager.MODE_ALLOWED
+                } else {
+                    // On older Android, try via Settings.canDrawOverlays again but with Application context
+                    Settings.canDrawOverlays(context.applicationContext)
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "hasOverlayPermission: check3 failed: ${e.message}")
                 false
             }
+
+            // Check 4: Last resort - try to actually add a test view (the most definitive check)
+            val check4 = try {
+                val wm = context.getSystemService(android.content.Context.WINDOW_SERVICE) as? android.view.WindowManager
+                if (wm != null) {
+                    val testView = android.view.View(context)
+                    val testParams = android.view.WindowManager.LayoutParams(
+                        1, 1,
+                        android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                        android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                        android.graphics.PixelFormat.TRANSLUCENT
+                    )
+                    try {
+                        wm.addView(testView, testParams)
+                        wm.removeView(testView)
+                        true
+                    } catch (e: Exception) {
+                        Log.w(TAG, "hasOverlayPermission: check4 (addView test) failed: ${e.message}")
+                        false
+                    }
+                } else false
+            } catch (e: Exception) {
+                Log.w(TAG, "hasOverlayPermission: check4 exception: ${e.message}")
+                false
+            }
             
-            val result = check1 || check2 || check3
-            Log.d(TAG, "hasOverlayPermission: check1=$check1, check2=$check2, check3=$check3, final=$result, activity=$activity")
+            val result = check1 || check2 || check3 || check4
+            Log.d(TAG, "hasOverlayPermission: check1=$check1, check2=$check2, check3=$check3, check4=$check4, final=$result")
             promise.resolve(result)
         } catch (e: Exception) {
             Log.e(TAG, "hasOverlayPermission: exception: ${e.message}", e)
