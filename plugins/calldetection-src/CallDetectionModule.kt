@@ -341,9 +341,21 @@ class CallDetectionModule(
             Log.e(TAG, "[CallDetectionModule] NO OVERLAY PERMISSION - can't show overlay!")
             return
         }
+        // Read token and baseUrl from prefs to pass via Intent extras
+        val prefs = prefs()
+        val authToken = prefs.getString(CallOverlayService.PREF_TOKEN, null)
+        val baseUrl = prefs.getString(CallOverlayService.PREF_BASE_URL, null)
+        Log.d(TAG, "[CallDetectionModule] Token available: ${!authToken.isNullOrEmpty()}, baseUrl: ${!baseUrl.isNullOrEmpty()}")
+
         val intent = Intent(reactApplicationContext, CallOverlayService::class.java).apply {
             action = CallOverlayService.ACTION_SHOW
             putExtra(CallOverlayService.EXTRA_PHONE_NUMBER, phoneNumber)
+            if (!authToken.isNullOrEmpty()) {
+                putExtra(CallOverlayService.EXTRA_AUTH_TOKEN, authToken)
+            }
+            if (!baseUrl.isNullOrEmpty()) {
+                putExtra(CallOverlayService.EXTRA_BASE_URL, baseUrl)
+            }
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         try {
