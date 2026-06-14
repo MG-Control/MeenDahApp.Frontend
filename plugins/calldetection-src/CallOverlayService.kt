@@ -62,8 +62,15 @@ class CallOverlayService : Service() {
     private fun isDarkTheme(): Boolean {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val theme = prefs.getString(PREF_THEME, "dark") ?: "dark"
-        Log.d(TAG, "isDarkTheme(): theme from prefs: $theme → returning ${theme == "dark"}")
+        Log.d(TAG, "isDarkTheme(): theme from prefs: $theme → returning ${theme == "dark"}, all prefs: ${prefs.all}")
         return theme == "dark"
+    }
+
+    private fun getVersionLabel(): String {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val version = prefs.getString(PREF_VERSION, "1.0.0") ?: "1.0.0"
+        Log.d(TAG, "getVersionLabel(): version from prefs: $version, all prefs: ${prefs.all}")
+        return version
     }
 
     private val bgColor: Int
@@ -108,6 +115,7 @@ class CallOverlayService : Service() {
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to open app", e)
                 }
+                stopSelf()
             }
             ACTION_SHOW -> {
                 // Always ensure foreground status immediately
@@ -125,6 +133,13 @@ class CallOverlayService : Service() {
                 }
             }
             ACTION_HIDE -> {
+                // ALWAYS call startForeground() first to avoid the crash!
+                startForeground(PERSISTENT_NOTIFICATION_ID, buildSetupNotification())
+                // Then immediately stop foreground and remove the notification
+                try {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } catch (ignored: Exception) {
+                }
                 dismissOverlay()
                 stopSelf()
             }
@@ -134,7 +149,12 @@ class CallOverlayService : Service() {
             }
             ACTION_HIDE_SETUP_NOTIFICATION -> {
                 Log.d(TAG, "ACTION_HIDE_SETUP_NOTIFICATION: stopping foreground service")
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                // Make sure we're in foreground first
+                startForeground(PERSISTENT_NOTIFICATION_ID, buildSetupNotification())
+                try {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } catch (ignored: Exception) {
+                }
                 stopSelf()
             }
             else -> {
@@ -473,9 +493,7 @@ class CallOverlayService : Service() {
 
         // ── Version Label ──
         val versionLabel = TextView(this).apply {
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val version = prefs.getString(PREF_VERSION, "1.0.0") ?: "1.0.0"
-            Log.d(TAG, "buildOverlayView(): read version from prefs: $version")
+            val version = getVersionLabel()
             text = "v$version"
             setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)

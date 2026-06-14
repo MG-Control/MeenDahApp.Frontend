@@ -5,21 +5,53 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.CallLog
 import android.provider.Settings
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import com.facebook.react.bridge.*
+import com.facebook.react.modules.core.DeviceEventManagerModule
 
-class CallDetectionModule(reactContext: ReactApplicationContext) :
-    ReactContextBaseJavaModule(reactContext) {
+class CallDetectionModule(
+    reactContext: ReactApplicationContext
+) : ReactContextBaseJavaModule(reactContext), LifecycleEventListener {
+
+    init {
+        reactContext.addLifecycleEventListener(this)
+        setReactContext(reactContext)
+    }
 
     companion object {
         private const val REQUEST_ROLE_CODE = 1001
         private const val TAG = "MeenDah"
+        private var reactContext: ReactApplicationContext? = null
+
+        fun setReactContext(context: ReactApplicationContext) {
+            reactContext = context
+            Log.d(TAG, "setReactContext called")
+        }
+
+        fun getReactContext(): ReactApplicationContext? = reactContext
+
+        fun sendToReactNative(eventName: String, data: String) {
+            val ctx = getReactContext()
+            if (ctx != null && ctx.hasActiveCatalystInstance()) {
+                try {
+                    ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                        .emit(eventName, data)
+                } catch (e: Exception) {
+                    Log.e(TAG, "sendToReactNative failed: ${e.message}", e)
+                }
+            } else {
+                Log.d(TAG, "sendToReactNative skipped: no active Catalyst instance")
+            }
+        }
     }
 
     override fun getName() = "CallDetectionModule"
+
+    override fun onHostResume() {}
+    override fun onHostPause() {}
+    override fun onHostDestroy() {}
 
     @ReactMethod
     fun setAuthToken(token: String) {
@@ -52,10 +84,17 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun hasOverlayPermission(promise: Promise) {
-        val context = reactApplicationContext.currentActivity ?: reactApplicationContext
-        val result = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
-                Settings.canDrawOverlays(context)
-        Log.d(TAG, "hasOverlayPermission: $result, SDK: ${Build.VERSION.SDK_INT}, context: $context")
+        val activity = reactApplicationContext.currentActivity
+        val context = activity ?: reactApplicationContext
+        val result = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            true
+        } else {
+            val check1 = Settings.canDrawOverlays(context)
+            val check2 = if (activity != null) Settings.canDrawOverlays(activity) else check1
+            Log.d(TAG, "hasOverlayPermission: check1=$check1, check2=$check2, activity=$activity")
+            check1 || check2
+        }
+        Log.d(TAG, "hasOverlayPermission: final result=$result")
         promise.resolve(result)
     }
 
@@ -66,39 +105,50 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
             Log.e(TAG, "requestOverlayPermission: no current activity available")
             return
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-            !Settings.canDrawOverlays(activity)
-        ) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${activity.packageName}")
-            ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-            activity.startActivity(intent)
-            Log.d(TAG, "requestOverlayPermission: opened settings")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${activity.packageName}")
+                ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                Log.d(TAG, "requestOverlayPermission: opening overlay settings")
+                activity.startActivity(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "requestOverlayPermission: failed, opening app details instead", e)
+                openAppDetailsSettings()
+            }
         } else {
-            Log.d(TAG, "requestOverlayPermission: overlay permission already granted or SDK < M")
+            Log.d(TAG, "requestOverlayPermission: SDK < M")
         }
     }
 
-    /**
-     * يطلب من المستخدم تعيين الـ app كـ default caller ID app.
-     * ده مطلوب على Android 10+ عشان MeenDahCallScreeningService يشتغل ويجيب رقم المتصل.
-     * على Android 10+: بيستخدم RoleManager.ROLE_CALL_SCREENING
-     * على Android أقدم: بيفتح إعدادات الـ default phone app
-     */
+    @ReactMethod
+    fun openAppDetailsSettings() {
+        Log.d(TAG, "openAppDetailsSettings called")
+        val intent = Intent().apply {
+            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            data = Uri.fromParts("package", reactApplicationContext.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            reactApplicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "openAppDetailsSettings failed", e)
+        }
+    }
+
     @ReactMethod
     fun requestDefaultCallerIdApp(promise: Promise) {
         try {
             Log.d(TAG, "requestDefaultCallerIdApp called")
             val activity = reactApplicationContext.currentActivity
             if (activity == null) {
-                Log.e(TAG, "requestDefaultCallerIdApp: no current activity available")
+                Log.e(TAG, "requestDefaultCallerIdApp: no current activity")
                 promise.resolve(false)
                 return
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Log.d(TAG, "requestDefaultCallerIdApp: Android Q+")
                 val roleManager = activity.getSystemService(RoleManager::class.java)
                 if (roleManager != null) {
                     val isHeld = roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
@@ -107,18 +157,15 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
                         promise.resolve(true)
                         return
                     }
-                    Log.d(TAG, "requestDefaultCallerIdApp: creating request role intent")
                     val roleIntent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                     activity.startActivityForResult(roleIntent, REQUEST_ROLE_CODE)
-                    Log.d(TAG, "requestDefaultCallerIdApp: started activity for result")
                     promise.resolve(true)
                 } else {
-                    Log.e(TAG, "requestDefaultCallerIdApp: roleManager is null")
+                    Log.e(TAG, "requestDefaultCallerIdApp: roleManager null")
                     openDefaultAppsSettings()
                     promise.resolve(false)
                 }
             } else {
-                Log.d(TAG, "requestDefaultCallerIdApp: Android < Q, opening settings")
                 openDefaultAppsSettings()
                 promise.resolve(true)
             }
@@ -139,13 +186,10 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             reactApplicationContext.startActivity(intent)
         } catch (e: Exception) {
-            Log.e(TAG, "Could not open settings: ${e.message}")
+            Log.e(TAG, "Could not open settings: ${e.message}", e)
         }
     }
 
-    /**
-     * يتحقق إذا كان التطبيق هو الـ Default Caller ID & Spam App
-     */
     @ReactMethod
     fun isDefaultCallerIdApp(promise: Promise) {
         try {
@@ -155,7 +199,6 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
                 Log.d(TAG, "[CallDetectionModule] isDefaultCallerIdApp: $isHeld")
                 promise.resolve(isHeld)
             } else {
-                // على Android أقل من 10، مش محتاجة default app، فنرجع true دائماً
                 promise.resolve(true)
             }
         } catch (e: Exception) {
@@ -186,13 +229,11 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-     * TEST: يظهر الـ overlay يدوياً لاختبار بدون مكالمة
-     */
     @ReactMethod
     fun testShowOverlay(phoneNumber: String) {
         Log.d(TAG, "[CallDetectionModule] testShowOverlay called with: $phoneNumber")
-        val hasOverlayPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(reactApplicationContext)
+        val hasOverlayPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                Settings.canDrawOverlays(reactApplicationContext)
         Log.d(TAG, "[CallDetectionModule] has overlay permission: $hasOverlayPermission")
         if (!hasOverlayPermission) {
             Log.e(TAG, "[CallDetectionModule] NO OVERLAY PERMISSION - can't show overlay!")
@@ -215,9 +256,6 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    /**
-     * TEST: يخفي الـ overlay يدوياً
-     */
     @ReactMethod
     fun testHideOverlay() {
         Log.d(TAG, "[CallDetectionModule] testHideOverlay called")
@@ -258,6 +296,53 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
             reactApplicationContext.startService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to hide persistent notification", e)
+        }
+    }
+
+    @ReactMethod
+    fun getRecentLogs(promise: Promise) {
+        try {
+            val projection = arrayOf(
+                CallLog.Calls._ID, CallLog.Calls.NUMBER, CallLog.Calls.TYPE,
+                CallLog.Calls.DURATION, CallLog.Calls.DATE, CallLog.Calls.COUNTRY_ISO
+            )
+            val sortOrder = "${CallLog.Calls.DATE} DESC"
+            val cursor = reactApplicationContext.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                projection,
+                null,
+                null,
+                sortOrder
+            )
+            if (cursor != null && cursor.moveToFirst()) {
+                val result = Arguments.createArray()
+                val numberIndex = cursor.getColumnIndex(CallLog.Calls.NUMBER)
+                val typeIndex = cursor.getColumnIndex(CallLog.Calls.TYPE)
+                val dateIndex = cursor.getColumnIndex(CallLog.Calls.DATE)
+                val durationIndex = cursor.getColumnIndex(CallLog.Calls.DURATION)
+                val countryIsoIndex = cursor.getColumnIndex(CallLog.Calls.COUNTRY_ISO)
+                var count = 0
+                do {
+                    if (count >= 20) break
+                    val callLog = Arguments.createMap()
+                    callLog.putString("number", cursor.getString(numberIndex))
+                    callLog.putInt("type", cursor.getInt(typeIndex))
+                    callLog.putDouble("date", cursor.getLong(dateIndex).toDouble())
+                    callLog.putInt("duration", cursor.getInt(durationIndex))
+                    callLog.putString("countryIso", cursor.getString(countryIsoIndex))
+                    result.pushMap(callLog)
+                    count++
+                } while (cursor.moveToNext())
+                cursor.close()
+                Log.d(TAG, "getRecentLogs: returning $count logs")
+                promise.resolve(result)
+            } else {
+                Log.d(TAG, "getRecentLogs: no logs found")
+                promise.resolve(Arguments.createArray())
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getRecentLogs exception: ${e.message}", e)
+            promise.reject("Exception", e.message)
         }
     }
 

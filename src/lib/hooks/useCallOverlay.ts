@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { NativeModules, PermissionsAndroid, Platform, AppState } from 'react-native';
+import { PermissionsAndroid, Platform, AppState, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import Constants from 'expo-constants';
 import { callDetection } from '@/lib/native/callDetection';
 import { useAuthStore } from '@/lib/stores/authStore';
 
@@ -24,6 +26,7 @@ export function useCallOverlay() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const { t } = useTranslation();
+  const colorScheme = useColorScheme();
   const permissionsRequested = useRef(false);
   const [permissions, setPermissions] = useState<PermissionsState>({
     hasPostNotifications: null,
@@ -74,6 +77,18 @@ export function useCallOverlay() {
     });
   };
 
+  // Open app settings
+  const openAppSettings = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        if (__DEV__) console.log('[CallOverlay] Opening app settings via Linking.openSettings()');
+        await Linking.openSettings();
+      } catch (e2) {
+        if (__DEV__) console.error('[CallOverlay] Linking.openSettings error:', e2);
+      }
+    }
+  };
+
   // Request a specific runtime permission
   const requestRuntimePermission = async (
     permission: typeof PermissionsAndroid.PERMISSIONS[keyof typeof PermissionsAndroid.PERMISSIONS],
@@ -83,6 +98,10 @@ export function useCallOverlay() {
     try {
       const result = await PermissionsAndroid.request(permission, rationale);
       if (__DEV__) console.log('[CallOverlay] requestRuntimePermission result:', result);
+      if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+        if (__DEV__) console.log('[CallOverlay] Got NEVER_ASK_AGAIN, opening app settings');
+        await openAppSettings();
+      }
       return result === PermissionsAndroid.RESULTS.GRANTED;
     } catch (e) {
       if (__DEV__) console.error('[CallOverlay] requestRuntimePermission error:', e);
@@ -97,6 +116,32 @@ export function useCallOverlay() {
     if (Platform.OS !== 'android') return;
     callDetection.setApiBaseUrl(BASE_URL.replace(/\/+$/, ''));
   }, []);
+
+  // Set Theme and Version on mount and when colorScheme changes
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
+    const version = Constants.expoConfig?.version || '1.0.0';
+    if (__DEV__) {
+      console.log('[CallOverlay] Setting theme:', appTheme);
+      console.log('[CallOverlay] Setting version:', version);
+    }
+    callDetection.setTheme(appTheme);
+    callDetection.setVersion(version);
+  }, [colorScheme]);
+
+  // Also set theme and version when auth changes (just in case)
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !accessToken) return;
+    const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
+    const version = Constants.expoConfig?.version || '1.0.0';
+    if (__DEV__) {
+      console.log('[CallOverlay] (Auth) Setting theme:', appTheme);
+      console.log('[CallOverlay] (Auth) Setting version:', version);
+    }
+    callDetection.setTheme(appTheme);
+    callDetection.setVersion(version);
+  }, [accessToken]);
 
   // Sync auth token
   useEffect(() => {
@@ -168,6 +213,8 @@ export function useCallOverlay() {
     requestIgnoreBatteryOptimizations: callDetection.requestIgnoreBatteryOptimizations,
     openDefaultAppsSettings: callDetection.openDefaultAppsSettings,
     requestRuntimePermission,
+    openAppSettings,
+    openAppDetailsSettings: callDetection.openAppDetailsSettings,
     checkPermissionsStatus,
   };
 }
