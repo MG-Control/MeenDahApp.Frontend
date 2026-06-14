@@ -120,10 +120,11 @@ export function useCallOverlay() {
   // Set Theme and Version on mount and when colorScheme changes
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
-    const version = Constants.expoConfig?.version || '1.0.0';
+    const resolvedScheme = colorScheme ?? 'light';
+    const appTheme = resolvedScheme === 'dark' ? 'dark' : 'light';
+    const version = Constants.expoConfig?.version ?? '1.0.0';
     if (__DEV__) {
-      console.log('[CallOverlay] Setting theme:', appTheme);
+      console.log('[CallOverlay] Setting theme:', appTheme, '(raw colorScheme:', colorScheme, ')');
       console.log('[CallOverlay] Setting version:', version);
     }
     callDetection.setTheme(appTheme);
@@ -133,8 +134,9 @@ export function useCallOverlay() {
   // Also set theme and version when auth changes (just in case)
   useEffect(() => {
     if (Platform.OS !== 'android' || !accessToken) return;
-    const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
-    const version = Constants.expoConfig?.version || '1.0.0';
+    const resolvedScheme = colorScheme ?? 'light';
+    const appTheme = resolvedScheme === 'dark' ? 'dark' : 'light';
+    const version = Constants.expoConfig?.version ?? '1.0.0';
     if (__DEV__) {
       console.log('[CallOverlay] (Auth) Setting theme:', appTheme);
       console.log('[CallOverlay] (Auth) Setting version:', version);
@@ -268,10 +270,6 @@ async function ensurePermissions(s: Strings) {
     // 4. SYSTEM_ALERT_WINDOW (overlay) — must be granted via Settings on Android 6+
     const hasOverlay = await callDetection.hasOverlayPermission();
     if (__DEV__) console.log('[CallOverlay] Has overlay permission:', hasOverlay);
-    if (!hasOverlay) {
-      if (__DEV__) console.log('[CallOverlay] Requesting overlay permission...');
-      callDetection.requestOverlayPermission();
-    }
 
     // 5. طلب تعيين الـ app كـ default caller ID / screening app (Android 10+)
     // ده الأهم — بدونه CallScreeningService مش بيشتغل خالص

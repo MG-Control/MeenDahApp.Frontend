@@ -84,18 +84,45 @@ class CallDetectionModule(
 
     @ReactMethod
     fun hasOverlayPermission(promise: Promise) {
-        val activity = reactApplicationContext.currentActivity
-        val context = activity ?: reactApplicationContext
-        val result = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            true
-        } else {
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                Log.d(TAG, "hasOverlayPermission: SDK < M, returning true")
+                promise.resolve(true)
+                return
+            }
+
+            val activity = reactApplicationContext.currentActivity
+            val context = activity ?: reactApplicationContext
+            
+            // Try multiple checks to work around Android bug where Settings.canDrawOverlays()
+            // returns false even after permission is granted
             val check1 = Settings.canDrawOverlays(context)
-            val check2 = if (activity != null) Settings.canDrawOverlays(activity) else check1
-            Log.d(TAG, "hasOverlayPermission: check1=$check1, check2=$check2, activity=$activity")
-            check1 || check2
+            val check2 = if (activity != null) {
+                try {
+                    Settings.canDrawOverlays(activity)
+                } catch (e: Exception) {
+                    Log.w(TAG, "hasOverlayPermission: check2 failed: ${e.message}")
+                    false
+                }
+            } else {
+                check1
+            }
+            
+            // Try alternative check via PackageManager (more reliable)
+            val check3 = try {
+                context.checkSelfPermission("android.permission.SYSTEM_ALERT_WINDOW") == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } catch (e: Exception) {
+                Log.w(TAG, "hasOverlayPermission: check3 failed: ${e.message}")
+                false
+            }
+            
+            val result = check1 || check2 || check3
+            Log.d(TAG, "hasOverlayPermission: check1=$check1, check2=$check2, check3=$check3, final=$result, activity=$activity")
+            promise.resolve(result)
+        } catch (e: Exception) {
+            Log.e(TAG, "hasOverlayPermission: exception: ${e.message}", e)
+            promise.resolve(false)
         }
-        Log.d(TAG, "hasOverlayPermission: final result=$result")
-        promise.resolve(result)
     }
 
     @ReactMethod
@@ -106,16 +133,24 @@ class CallDetectionModule(
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${activity.packageName}")
-                ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-                Log.d(TAG, "requestOverlayPermission: opening overlay settings")
-                activity.startActivity(intent)
-            } catch (e: Exception) {
-                Log.e(TAG, "requestOverlayPermission: failed, opening app details instead", e)
-                openAppDetailsSettings()
+            // Check if permission is NOT already granted before opening settings
+            val canDraw = Settings.canDrawOverlays(activity)
+            Log.d(TAG, "requestOverlayPermission: canDrawOverlays = $canDraw")
+            
+            if (!canDraw) {
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${activity.packageName}")
+                    ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                    Log.d(TAG, "requestOverlayPermission: opening overlay settings")
+                    activity.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "requestOverlayPermission: failed, opening app details instead", e)
+                    openAppDetailsSettings()
+                }
+            } else {
+                Log.d(TAG, "requestOverlayPermission: permission already granted, skipping settings")
             }
         } else {
             Log.d(TAG, "requestOverlayPermission: SDK < M")
