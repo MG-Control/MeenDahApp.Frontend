@@ -91,6 +91,18 @@ export default function HomeScreen() {
       canOpenSettings: true,
     },
     {
+      key: 'hasReadContacts',
+      title: 'Read Contacts',
+      desc: 'Identify callers saved in your contacts and show their names',
+      icon: 'people',
+      perm: PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+      isGranted: permissions.hasReadContacts,
+      onRequest: async () => {
+        await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_CONTACTS, getRationale('Contacts'));
+      },
+      canOpenSettings: true,
+    },
+    {
       key: 'hasReadPhoneState',
       title: 'Read Phone State',
       desc: 'Required to detect incoming phone calls',
