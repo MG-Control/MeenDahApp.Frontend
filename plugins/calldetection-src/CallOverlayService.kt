@@ -61,16 +61,32 @@ class CallOverlayService : Service() {
 
     private fun isDarkTheme(): Boolean {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val theme = prefs.getString(PREF_THEME, "dark") ?: "dark"
+        // Default to "light" to match app.json userInterfaceStyle: "automatic"
+        val theme = prefs.getString(PREF_THEME, "light") ?: "light"
         Log.d(TAG, "isDarkTheme(): theme from prefs: $theme → returning ${theme == "dark"}, all prefs: ${prefs.all}")
         return theme == "dark"
     }
 
     private fun getVersionLabel(): String {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val version = prefs.getString(PREF_VERSION, "1.0.0") ?: "1.0.0"
-        Log.d(TAG, "getVersionLabel(): version from prefs: $version, all prefs: ${prefs.all}")
-        return version
+        // Try SharedPreferences first (set by React Native side via callDetection.setVersion())
+        var version = prefs.getString(PREF_VERSION, null)
+        if (version != null) {
+            Log.d(TAG, "getVersionLabel(): version from prefs: $version")
+            return version
+        }
+        // Fallback: try to read from PackageManager (build.gradle versionName)
+        try {
+            version = packageManager.getPackageInfo(packageName, 0).versionName
+            if (!version.isNullOrEmpty()) {
+                Log.d(TAG, "getVersionLabel(): version from PackageManager: $version")
+                return version
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getVersionLabel(): PackageManager failed: ${e.message}")
+        }
+        Log.d(TAG, "getVersionLabel(): using fallback version 1.0.0")
+        return "1.0.0"
     }
 
     private val bgColor: Int

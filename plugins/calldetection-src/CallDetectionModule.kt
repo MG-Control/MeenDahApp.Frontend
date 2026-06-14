@@ -133,27 +133,23 @@ class CallDetectionModule(
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Check if permission is NOT already granted before opening settings
-            val canDraw = Settings.canDrawOverlays(activity)
-            Log.d(TAG, "requestOverlayPermission: canDrawOverlays = $canDraw")
-            
-            if (!canDraw) {
-                try {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${activity.packageName}")
-                    ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-                    Log.d(TAG, "requestOverlayPermission: opening overlay settings")
-                    activity.startActivity(intent)
-                } catch (e: Exception) {
-                    Log.e(TAG, "requestOverlayPermission: failed, opening app details instead", e)
-                    openAppDetailsSettings()
-                }
-            } else {
-                Log.d(TAG, "requestOverlayPermission: permission already granted, skipping settings")
+            // Always try to open overlay settings when user explicitly taps the button.
+            // Even if Settings.canDrawOverlays() thinks it's granted, there could be a
+            // known Android bug where it returns false incorrectly after a reboot.
+            try {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${activity.packageName}")
+                ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                Log.d(TAG, "requestOverlayPermission: opening overlay settings")
+                activity.startActivity(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "requestOverlayPermission: ACTION_MANAGE_OVERLAY_PERMISSION failed, opening app details instead", e)
+                openAppDetailsSettings()
             }
         } else {
-            Log.d(TAG, "requestOverlayPermission: SDK < M")
+            Log.d(TAG, "requestOverlayPermission: SDK < M, opening app details settings")
+            openAppDetailsSettings()
         }
     }
 
