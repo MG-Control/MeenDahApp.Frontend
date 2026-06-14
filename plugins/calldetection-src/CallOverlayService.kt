@@ -62,6 +62,7 @@ class CallOverlayService : Service() {
     private fun isDarkTheme(): Boolean {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val theme = prefs.getString(PREF_THEME, "dark") ?: "dark"
+        Log.d(TAG, "isDarkTheme(): theme from prefs: $theme → returning ${theme == "dark"}")
         return theme == "dark"
     }
 
@@ -90,6 +91,9 @@ class CallOverlayService : Service() {
         val action = intent?.action
         val number = intent?.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
         Log.d(TAG, "onStartCommand action=$action number=[$number]")
+
+        // Make sure notification channels are created for any action that uses foreground service
+        createNotificationChannel()
 
         when (action) {
             "OPEN_SETTINGS" -> {
@@ -125,9 +129,11 @@ class CallOverlayService : Service() {
                 stopSelf()
             }
             ACTION_SHOW_SETUP_NOTIFICATION -> {
+                Log.d(TAG, "ACTION_SHOW_SETUP_NOTIFICATION: starting foreground service with setup notification")
                 startForeground(PERSISTENT_NOTIFICATION_ID, buildSetupNotification())
             }
             ACTION_HIDE_SETUP_NOTIFICATION -> {
+                Log.d(TAG, "ACTION_HIDE_SETUP_NOTIFICATION: stopping foreground service")
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -469,6 +475,7 @@ class CallOverlayService : Service() {
         val versionLabel = TextView(this).apply {
             val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val version = prefs.getString(PREF_VERSION, "1.0.0") ?: "1.0.0"
+            Log.d(TAG, "buildOverlayView(): read version from prefs: $version")
             text = "v$version"
             setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)

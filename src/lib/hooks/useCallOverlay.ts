@@ -10,25 +10,86 @@ const BASE_URL = (
     : process.env.EXPO_PUBLIC_API_URL_PROD
 ) ?? 'https://meendah.mg-control.com';
 
+interface PermissionsState {
+  hasPostNotifications: boolean | null;
+  hasReadPhoneState: boolean | null;
+  hasReadCallLog: boolean | null;
+  hasReadPhoneNumbers: boolean | null;
+  hasOverlayPermission: boolean | null;
+  isDefaultCallerId: boolean | null;
+  isIgnoringBattery: boolean | null;
+}
+
 export function useCallOverlay() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const { t } = useTranslation();
   const permissionsRequested = useRef(false);
-  const [isDefaultCallerId, setIsDefaultCallerId] = useState<boolean | null>(null);
-  const [hasOverlayPermission, setHasOverlayPermission] = useState<boolean | null>(null);
-  const [isIgnoringBattery, setIsIgnoringBattery] = useState<boolean | null>(null);
+  const [permissions, setPermissions] = useState<PermissionsState>({
+    hasPostNotifications: null,
+    hasReadPhoneState: null,
+    hasReadCallLog: null,
+    hasReadPhoneNumbers: null,
+    hasOverlayPermission: null,
+    isDefaultCallerId: null,
+    isIgnoringBattery: null,
+  });
   const appState = useRef(AppState.currentState);
 
-  // Check permissions (default caller id & overlay & battery)
+  // Check all permissions status
   const checkPermissionsStatus = async () => {
     if (Platform.OS !== 'android') return;
-    const status = await callDetection.isDefaultCallerIdApp();
-    const overlay = await callDetection.hasOverlayPermission();
-    const battery = await callDetection.isIgnoringBatteryOptimizations();
-    setIsDefaultCallerId(status);
-    setHasOverlayPermission(overlay);
-    setIsIgnoringBattery(battery);
+    if (__DEV__) console.log('[CallOverlay] checkPermissionsStatus() called');
+
+    // Check Android runtime permissions
+    const hasPostNotifications = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    const hasReadPhoneState = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE);
+    const hasReadCallLog = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_CALL_LOG);
+    const hasReadPhoneNumbers = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
+
+    // Check permissions via native module
+    const isDefaultCallerId = await callDetection.isDefaultCallerIdApp();
+    const hasOverlayPermission = await callDetection.hasOverlayPermission();
+    const isIgnoringBattery = await callDetection.isIgnoringBatteryOptimizations();
+
+    if (__DEV__) {
+      console.log('[CallOverlay] checkPermissionsStatus() results:');
+      console.log('  hasPostNotifications:', hasPostNotifications);
+      console.log('  hasReadPhoneState:', hasReadPhoneState);
+      console.log('  hasReadCallLog:', hasReadCallLog);
+      console.log('  hasReadPhoneNumbers:', hasReadPhoneNumbers);
+      console.log('  hasOverlayPermission:', hasOverlayPermission);
+      console.log('  isDefaultCallerId:', isDefaultCallerId);
+      console.log('  isIgnoringBattery:', isIgnoringBattery);
+    }
+
+    setPermissions({
+      hasPostNotifications,
+      hasReadPhoneState,
+      hasReadCallLog,
+      hasReadPhoneNumbers,
+      hasOverlayPermission,
+      isDefaultCallerId,
+      isIgnoringBattery,
+    });
+  };
+
+  // Request a specific runtime permission
+  const requestRuntimePermission = async (
+    permission: typeof PermissionsAndroid.PERMISSIONS[keyof typeof PermissionsAndroid.PERMISSIONS],
+    rationale: { title: string; message: string; buttonPositive: string; buttonNegative: string }
+  ) => {
+    if (__DEV__) console.log('[CallOverlay] requestRuntimePermission:', permission);
+    try {
+      const result = await PermissionsAndroid.request(permission, rationale);
+      if (__DEV__) console.log('[CallOverlay] requestRuntimePermission result:', result);
+      return result === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (e) {
+      if (__DEV__) console.error('[CallOverlay] requestRuntimePermission error:', e);
+      return false;
+    } finally {
+      await checkPermissionsStatus();
+    }
   };
 
   // Set API base URL once
@@ -87,21 +148,26 @@ export function useCallOverlay() {
     if (Platform.OS !== 'android') return;
     if (!_hasHydrated || !accessToken) return;
 
-    if (isDefaultCallerId === false) {
+    if (__DEV__) {
+      console.log('[CallOverlay] isDefaultCallerId changed:', permissions.isDefaultCallerId);
+    }
+
+    if (permissions.isDefaultCallerId === false) {
+      if (__DEV__) console.log('[CallOverlay] Showing persistent notification');
       callDetection.showPersistentNotification();
     } else {
+      if (__DEV__) console.log('[CallOverlay] Hiding persistent notification');
       callDetection.hidePersistentNotification();
     }
-  }, [isDefaultCallerId, _hasHydrated, accessToken]);
+  }, [permissions.isDefaultCallerId, _hasHydrated, accessToken]);
 
   return {
-    isDefaultCallerId,
-    hasOverlayPermission,
-    isIgnoringBattery,
+    permissions,
     requestDefaultCallerId: callDetection.requestDefaultCallerIdApp,
     requestOverlayPermission: callDetection.requestOverlayPermission,
     requestIgnoreBatteryOptimizations: callDetection.requestIgnoreBatteryOptimizations,
     openDefaultAppsSettings: callDetection.openDefaultAppsSettings,
+    requestRuntimePermission,
     checkPermissionsStatus,
   };
 }
@@ -195,8 +261,11 @@ async function requestIfNeeded(
   permission: (typeof PermissionsAndroid.PERMISSIONS)[keyof typeof PermissionsAndroid.PERMISSIONS],
   rationale: { title: string; message: string; buttonPositive: string; buttonNegative: string }
 ): Promise<boolean> {
+  if (__DEV__) console.log('[CallOverlay] requestIfNeeded() for permission:', permission);
   const already = await PermissionsAndroid.check(permission);
+  if (__DEV__) console.log('[CallOverlay] requestIfNeeded() already granted:', already);
   if (already) return true;
   const result = await PermissionsAndroid.request(permission, rationale);
+  if (__DEV__) console.log('[CallOverlay] requestIfNeeded() result:', result);
   return result === PermissionsAndroid.RESULTS.GRANTED;
 }

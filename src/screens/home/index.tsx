@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Platform, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ScrollView, Platform, TouchableOpacity, View, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,13 +26,11 @@ export default function HomeScreen() {
   const { hasSyncedContacts } = useSettingsStore();
   const { syncContacts, isSyncing } = useContactSync();
   const {
-    isDefaultCallerId,
-    hasOverlayPermission,
-    isIgnoringBattery,
+    permissions,
     requestDefaultCallerId,
     requestOverlayPermission,
     requestIgnoreBatteryOptimizations,
-    openDefaultAppsSettings,
+    requestRuntimePermission,
     checkPermissionsStatus
   } = useCallOverlay();
 
@@ -40,35 +38,156 @@ export default function HomeScreen() {
   useEffect(() => {
     if (Platform.OS === 'android') {
       const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
+      if (__DEV__) console.log('[HomeScreen] Setting theme in native module:', appTheme);
       callDetection.setTheme(appTheme);
       const version = Constants.expoConfig?.version || '1.0.0';
+      if (__DEV__) console.log('[HomeScreen] Setting version in native module:', version);
       callDetection.setVersion(version);
     }
   }, [colorScheme]);
-  const [isRequesting, setIsRequesting] = useState(false);
 
+  // Also set theme and version on mount
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
+      if (__DEV__) console.log('[HomeScreen] (Mount) Setting theme in native module:', appTheme);
+      callDetection.setTheme(appTheme);
+      const version = Constants.expoConfig?.version || '1.0.0';
+      if (__DEV__) console.log('[HomeScreen] (Mount) Setting version in native module:', version);
+      callDetection.setVersion(version);
+    }
+  }, []);
+
+  const [isRequestingDefault, setIsRequestingDefault] = useState(false);
+
+  // --- Handlers ---
   const handleRequestDefault = async () => {
-    setIsRequesting(true);
-    await requestDefaultCallerId();
-    // ننتظر قليلاً ثم نحدث الحالة
-    setTimeout(async () => {
-      await checkPermissionsStatus();
-      setIsRequesting(false);
-    }, 1500);
-  };
-
-  const handleOpenSettings = () => {
-    openDefaultAppsSettings();
+    if (__DEV__) console.log('[HomeScreen] handleRequestDefault called');
+    setIsRequestingDefault(true);
+    try {
+      await requestDefaultCallerId();
+      setTimeout(async () => {
+        await checkPermissionsStatus();
+        setIsRequestingDefault(false);
+      }, 1500);
+    } catch (e) {
+      if (__DEV__) console.error('[HomeScreen] handleRequestDefault error:', e);
+      setIsRequestingDefault(false);
+    }
   };
 
   const handleRequestOverlay = async () => {
-    await requestOverlayPermission();
-    await checkPermissionsStatus();
+    if (__DEV__) console.log('[HomeScreen] handleRequestOverlay called');
+    try {
+      await requestOverlayPermission();
+    } catch (e) {
+      if (__DEV__) console.error('[HomeScreen] handleRequestOverlay error:', e);
+    }
   };
 
   const handleRequestBattery = async () => {
-    await requestIgnoreBatteryOptimizations();
-    await checkPermissionsStatus();
+    if (__DEV__) console.log('[HomeScreen] handleRequestBattery called');
+    try {
+      await requestIgnoreBatteryOptimizations();
+    } catch (e) {
+      if (__DEV__) console.error('[HomeScreen] handleRequestBattery error:', e);
+    }
+  };
+
+  // --- Common Rationale ---
+  const getRationale = (permName: string) => ({
+    title: `Allow ${permName}`,
+    message: `Meendah needs this permission to identify who is calling you.`,
+    buttonPositive: 'Allow',
+    buttonNegative: 'Not Now',
+  });
+
+  // --- Permission Configs ---
+  const permissionsList = [
+    {
+      key: 'hasPostNotifications',
+      title: 'Allow Notifications',
+      desc: 'Show setup notifications to set Meendah as your caller ID app',
+      icon: 'notifications',
+      perm: PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      isGranted: permissions.hasPostNotifications,
+      onRequest: async () => {
+        await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, getRationale('Notifications'));
+      },
+    },
+    {
+      key: 'hasReadPhoneState',
+      title: 'Read Phone State',
+      desc: 'Required to detect incoming phone calls',
+      icon: 'phone-portrait',
+      perm: PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+      isGranted: permissions.hasReadPhoneState,
+      onRequest: async () => {
+        await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE, getRationale('Phone State'));
+      },
+    },
+    {
+      key: 'hasReadCallLog',
+      title: 'Read Call Log',
+      desc: 'Help identify callers from your call history',
+      icon: 'call',
+      perm: PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
+      isGranted: permissions.hasReadCallLog,
+      onRequest: async () => {
+        await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_CALL_LOG, getRationale('Call Log'));
+      },
+    },
+    {
+      key: 'hasReadPhoneNumbers',
+      title: 'Read Phone Numbers',
+      desc: 'Allow access to phone numbers to identify callers',
+      icon: 'keypad',
+      perm: PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS,
+      isGranted: permissions.hasReadPhoneNumbers,
+      onRequest: async () => {
+        await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS, getRationale('Phone Numbers'));
+      },
+    },
+    {
+      key: 'hasOverlayPermission',
+      title: 'Display Over Other Apps',
+      desc: 'Show the call overlay popup when a call comes in',
+      icon: 'eye',
+      isGranted: permissions.hasOverlayPermission,
+      onRequest: handleRequestOverlay,
+      needsSettings: true,
+    },
+    {
+      key: 'isDefaultCallerId',
+      title: 'Default Caller ID & Spam App',
+      desc: 'This is the most important! Without this, nothing works!',
+      icon: 'shield-checkmark',
+      isGranted: permissions.isDefaultCallerId,
+      onRequest: handleRequestDefault,
+      isDefault: true,
+    },
+    {
+      key: 'isIgnoringBattery',
+      title: 'Ignore Battery Optimizations',
+      desc: 'Allow Meendah to run in the background to detect calls',
+      icon: 'battery-charging',
+      isGranted: permissions.isIgnoringBattery,
+      onRequest: handleRequestBattery,
+      needsSettings: true,
+    },
+  ];
+
+  const StatusIcon = ({ isGranted, isDefault, needsSettings }: { isGranted: boolean | null, isDefault?: boolean, needsSettings?: boolean }) => {
+    if (isGranted === null) {
+      return <ActivityIndicator size="small" color={theme.textSecondary} />;
+    }
+    return (
+      <Ionicons
+        name={isGranted ? 'checkmark-circle' : 'warning'}
+        size={24}
+        color={isGranted ? '#34C759' : (isDefault ? '#FF3B30' : '#FF9500')}
+      />
+    );
   };
 
   const contentPlatformStyle = Platform.select({
@@ -93,109 +212,86 @@ export default function HomeScreen() {
           {t('auth.welcome')}, {user?.displayName || user?.email || 'User'}!
         </ThemedText>
 
-        {/* Caller ID Setup Card - Most Important */}
         {Platform.OS === 'android' && (
-          <ThemedView type="backgroundElement" style={[styles.card, styles.syncCard, {
-            borderColor: isDefaultCallerId === false ? 'rgba(255, 59, 48, 0.3)' : 'rgba(60, 135, 247, 0.2)',
-            backgroundColor: isDefaultCallerId === false ? 'rgba(255, 59, 48, 0.05)' : undefined,
-          }]}>
-            <View style={[styles.syncIconContainer, {
-              backgroundColor: isDefaultCallerId === false ? 'rgba(255, 59, 48, 0.1)' : 'rgba(60, 135, 247, 0.1)',
-            }]}>
+          <ThemedText type="subtitle" style={{ marginTop: Spacing.two }}>
+            Required Permissions
+          </ThemedText>
+        )}
+
+        {/* Render all permission cards */}
+        {Platform.OS === 'android' && permissionsList.map((perm) => (
+          <ThemedView
+            key={perm.key}
+            type="backgroundElement"
+            style={[
+              styles.card,
+              styles.syncCard,
+              {
+                borderColor: perm.isGranted === false
+                  ? (perm.isDefault ? 'rgba(255, 59, 48, 0.4)' : 'rgba(255, 149, 0, 0.4)')
+                  : 'rgba(60, 135, 247, 0.2)',
+                backgroundColor: perm.isGranted === false
+                  ? (perm.isDefault ? 'rgba(255, 59, 48, 0.08)' : 'rgba(255, 149, 0, 0.08)')
+                  : undefined,
+              }
+            ]}
+          >
+            <View style={styles.syncIconContainer}>
               <Ionicons
-                name={isDefaultCallerId ? 'checkmark-circle' : 'warning'}
-                size={28}
-                color={isDefaultCallerId === false ? '#FF3B30' : '#3c87f7'}
+                name={perm.icon as any}
+                size={24}
+                color={perm.isGranted === false ? (perm.isDefault ? '#FF3B30' : '#FF9500') : '#3c87f7'}
               />
             </View>
             <View style={styles.syncContent}>
-              <ThemedText type="subtitle">
-                {isDefaultCallerId ? 'Caller ID Enabled' : 'Enable Caller ID'}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two }}>
+                <ThemedText type="subtitle" style={{ fontSize: 15 }}>
+                  {perm.title}
+                </ThemedText>
+                <StatusIcon
+                  isGranted={perm.isGranted}
+                  isDefault={perm.isDefault}
+                  needsSettings={perm.needsSettings}
+                />
+              </View>
+              <ThemedText themeColor="textSecondary" style={{ fontSize: 13, marginTop: 2 }}>
+                {perm.desc}
               </ThemedText>
-              <ThemedText themeColor="textSecondary" style={styles.syncDesc}>
-                {isDefaultCallerId
-                  ? 'Great! Meendah will show you who is calling.'
-                  : 'Set Meendah as your default caller ID app to see who is calling.'}
-              </ThemedText>
-              {isDefaultCallerId === false && (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity
-                    style={[styles.syncButton, { backgroundColor: '#FF3B30', flex: 1 }]}
-                    onPress={handleRequestDefault}
-                    disabled={isRequesting}
-                  >
-                    {isRequesting ? (
-                      <ActivityIndicator color="white" />
-                    ) : (
-                      <>
-                        <Ionicons name="shield-checkmark" size={18} color="white" />
-                        <ThemedText style={styles.syncButtonText}>Enable Now</ThemedText>
-                      </>
-                    )}
-                  </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.syncButton, { backgroundColor: '#8E8E98', flex: 0.8 }]}
-                    onPress={handleOpenSettings}
-                  >
-                    <Ionicons name="settings-outline" size={18} color="white" />
-                    <ThemedText style={styles.syncButtonText}>Settings</ThemedText>
-                  </TouchableOpacity>
-                </View>
+              {perm.isGranted === false && (
+                <TouchableOpacity
+                  style={[
+                    styles.syncButton,
+                    {
+                      backgroundColor: perm.isDefault ? '#FF3B30' : '#FF9500',
+                      marginTop: 10,
+                    },
+                  ]}
+                  onPress={() => {
+                    if (__DEV__) console.log('[HomeScreen] Tapped button for:', perm.key);
+                    perm.onRequest();
+                  }}
+                  disabled={perm.isDefault && isRequestingDefault}
+                >
+                  {perm.isDefault && isRequestingDefault ? (
+                    <ActivityIndicator color="white" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name={perm.needsSettings ? 'settings' : 'checkmark'}
+                        size={18}
+                        color="white"
+                      />
+                      <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                        {perm.needsSettings ? 'Open Settings' : 'Allow'}
+                      </ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
               )}
             </View>
           </ThemedView>
-        )}
-
-        {/* Overlay Permission Card */}
-        {Platform.OS === 'android' && hasOverlayPermission === false && (
-          <ThemedView type="backgroundElement" style={[styles.card, styles.syncCard, {
-            borderColor: 'rgba(255, 149, 0, 0.3)',
-            backgroundColor: 'rgba(255, 149, 0, 0.05)',
-          }]}>
-            <View style={[styles.syncIconContainer, { backgroundColor: 'rgba(255, 149, 0, 0.1)' }]}>
-              <Ionicons name="warning" size={28} color="#FF9500" />
-            </View>
-            <View style={styles.syncContent}>
-              <ThemedText type="subtitle">Enable Floating Overlay</ThemedText>
-              <ThemedText themeColor="textSecondary" style={styles.syncDesc}>
-                Allow Meendah to display the caller info overlay over other apps.
-              </ThemedText>
-              <TouchableOpacity
-                style={[styles.syncButton, { backgroundColor: '#FF9500' }]}
-                onPress={handleRequestOverlay}
-              >
-                <Ionicons name="apps-outline" size={18} color="white" />
-                <ThemedText style={styles.syncButtonText}>Allow Overlay</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        )}
-
-        {/* Battery Optimization Card */}
-        {Platform.OS === 'android' && isIgnoringBattery === false && (
-          <ThemedView type="backgroundElement" style={[styles.card, styles.syncCard, {
-            borderColor: 'rgba(76, 217, 100, 0.3)',
-            backgroundColor: 'rgba(76, 217, 100, 0.05)',
-          }]}>
-            <View style={[styles.syncIconContainer, { backgroundColor: 'rgba(76, 217, 100, 0.1)' }]}>
-              <Ionicons name="battery-dead" size={28} color="#4CD964" />
-            </View>
-            <View style={styles.syncContent}>
-              <ThemedText type="subtitle">Prevent App Shutdown</ThemedText>
-              <ThemedText themeColor="textSecondary" style={styles.syncDesc}>
-                Disable battery optimization to keep Meendah active for incoming calls.
-              </ThemedText>
-              <TouchableOpacity
-                style={[styles.syncButton, { backgroundColor: '#4CD964' }]}
-                onPress={handleRequestBattery}
-              >
-                <Ionicons name="flash-outline" size={18} color="white" />
-                <ThemedText style={styles.syncButtonText}>Disable Optimization</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        )}
+        ))}
 
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="subtitle">{t('home.dashboard')}</ThemedText>
@@ -212,13 +308,13 @@ export default function HomeScreen() {
               Test the incoming call overlay without waiting for a call.
             </ThemedText>
             <View style={{ flexDirection: 'row', gap: 12 }}>
-              {hasOverlayPermission === false ? (
+              {permissions.hasOverlayPermission === false ? (
                 <TouchableOpacity
                   style={[styles.syncButton, { backgroundColor: '#FF9500', marginTop: 0, flex: 1 }]}
                   onPress={handleRequestOverlay}
                 >
                   <Ionicons name="apps-outline" size={18} color="white" />
-                  <ThemedText style={styles.syncButtonText}>Allow Overlay First</ThemedText>
+                  <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Allow Overlay First</ThemedText>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -226,7 +322,7 @@ export default function HomeScreen() {
                   onPress={() => callDetection.testShowOverlay('+201012345678')}
                 >
                   <Ionicons name="call" size={18} color="white" />
-                  <ThemedText style={styles.syncButtonText}>Show Overlay</ThemedText>
+                  <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Show Overlay</ThemedText>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -234,7 +330,7 @@ export default function HomeScreen() {
                 onPress={() => callDetection.testHideOverlay()}
               >
                 <Ionicons name="close-circle" size={18} color="white" />
-                <ThemedText style={styles.syncButtonText}>Hide</ThemedText>
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Hide</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>
@@ -260,7 +356,7 @@ export default function HomeScreen() {
                 ) : (
                   <>
                     <Ionicons name="sync" size={18} color="white" />
-                    <ThemedText style={styles.syncButtonText}>{t('contacts.syncButton')}</ThemedText>
+                    <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>{t('contacts.syncButton')}</ThemedText>
                   </>
                 )}
               </TouchableOpacity>

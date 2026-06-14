@@ -38,25 +38,34 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun setTheme(theme: String) {
+        Log.d(TAG, "setTheme called: $theme")
         prefs().edit().putString(CallOverlayService.PREF_THEME, theme).apply()
+        Log.d(TAG, "setTheme: saved to prefs")
     }
 
     @ReactMethod
     fun setVersion(version: String) {
+        Log.d(TAG, "setVersion called: $version")
         prefs().edit().putString(CallOverlayService.PREF_VERSION, version).apply()
+        Log.d(TAG, "setVersion: saved to prefs")
     }
 
     @ReactMethod
     fun hasOverlayPermission(promise: Promise) {
+        val context = reactApplicationContext.currentActivity ?: reactApplicationContext
         val result = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
-                Settings.canDrawOverlays(reactApplicationContext)
-        Log.d(TAG, "hasOverlayPermission: $result, SDK: ${Build.VERSION.SDK_INT}")
+                Settings.canDrawOverlays(context)
+        Log.d(TAG, "hasOverlayPermission: $result, SDK: ${Build.VERSION.SDK_INT}, context: $context")
         promise.resolve(result)
     }
 
     @ReactMethod
     fun requestOverlayPermission() {
-        val activity = reactApplicationContext.currentActivity ?: return
+        Log.d(TAG, "requestOverlayPermission called")
+        val activity = reactApplicationContext.currentActivity ?: run {
+            Log.e(TAG, "requestOverlayPermission: no current activity available")
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             !Settings.canDrawOverlays(activity)
         ) {
@@ -65,6 +74,9 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
                 Uri.parse("package:${activity.packageName}")
             ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
             activity.startActivity(intent)
+            Log.d(TAG, "requestOverlayPermission: opened settings")
+        } else {
+            Log.d(TAG, "requestOverlayPermission: overlay permission already granted or SDK < M")
         }
     }
 
@@ -77,30 +89,41 @@ class CallDetectionModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun requestDefaultCallerIdApp(promise: Promise) {
         try {
+            Log.d(TAG, "requestDefaultCallerIdApp called")
             val activity = reactApplicationContext.currentActivity
             if (activity == null) {
+                Log.e(TAG, "requestDefaultCallerIdApp: no current activity available")
                 promise.resolve(false)
                 return
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Log.d(TAG, "requestDefaultCallerIdApp: Android Q+")
                 val roleManager = activity.getSystemService(RoleManager::class.java)
                 if (roleManager != null) {
-                    if (roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+                    val isHeld = roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
+                    Log.d(TAG, "requestDefaultCallerIdApp: isRoleHeld: $isHeld")
+                    if (isHeld) {
                         promise.resolve(true)
                         return
                     }
+                    Log.d(TAG, "requestDefaultCallerIdApp: creating request role intent")
                     val roleIntent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                     activity.startActivityForResult(roleIntent, REQUEST_ROLE_CODE)
+                    Log.d(TAG, "requestDefaultCallerIdApp: started activity for result")
                     promise.resolve(true)
                 } else {
+                    Log.e(TAG, "requestDefaultCallerIdApp: roleManager is null")
+                    openDefaultAppsSettings()
                     promise.resolve(false)
                 }
             } else {
+                Log.d(TAG, "requestDefaultCallerIdApp: Android < Q, opening settings")
+                openDefaultAppsSettings()
                 promise.resolve(true)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "requestDefaultCallerIdApp error: ${e.message}")
+            Log.e(TAG, "requestDefaultCallerIdApp error: ${e.message}", e)
             promise.resolve(false)
         }
     }
