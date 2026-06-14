@@ -1,25 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, Platform, TouchableOpacity, View, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useContactSync } from '@/lib/hooks/useContactSync';
 import { useCallOverlay } from '@/lib/hooks/useCallOverlay';
-import { callDetection } from '@/lib/native/callDetection';
 import { styles } from './styles';
+import { BottomTabInset, Spacing } from '@/constants/theme';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { callDetection } from '@/lib/native/callDetection';
+import Constants from 'expo-constants';
 
 export default function HomeScreen() {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -31,32 +28,9 @@ export default function HomeScreen() {
     requestOverlayPermission,
     requestIgnoreBatteryOptimizations,
     requestRuntimePermission,
+    openAppSettings,
     checkPermissionsStatus
   } = useCallOverlay();
-
-  // Set theme and version in native module
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
-      if (__DEV__) console.log('[HomeScreen] Setting theme in native module:', appTheme);
-      callDetection.setTheme(appTheme);
-      const version = Constants.expoConfig?.version || '1.0.0';
-      if (__DEV__) console.log('[HomeScreen] Setting version in native module:', version);
-      callDetection.setVersion(version);
-    }
-  }, [colorScheme]);
-
-  // Also set theme and version on mount
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const appTheme = colorScheme === 'dark' ? 'dark' : 'light';
-      if (__DEV__) console.log('[HomeScreen] (Mount) Setting theme in native module:', appTheme);
-      callDetection.setTheme(appTheme);
-      const version = Constants.expoConfig?.version || '1.0.0';
-      if (__DEV__) console.log('[HomeScreen] (Mount) Setting version in native module:', version);
-      callDetection.setVersion(version);
-    }
-  }, []);
 
   const [isRequestingDefault, setIsRequestingDefault] = useState(false);
 
@@ -114,6 +88,7 @@ export default function HomeScreen() {
       onRequest: async () => {
         await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, getRationale('Notifications'));
       },
+      canOpenSettings: true,
     },
     {
       key: 'hasReadPhoneState',
@@ -125,6 +100,7 @@ export default function HomeScreen() {
       onRequest: async () => {
         await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE, getRationale('Phone State'));
       },
+      canOpenSettings: true,
     },
     {
       key: 'hasReadCallLog',
@@ -136,6 +112,7 @@ export default function HomeScreen() {
       onRequest: async () => {
         await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_CALL_LOG, getRationale('Call Log'));
       },
+      canOpenSettings: true,
     },
     {
       key: 'hasReadPhoneNumbers',
@@ -147,6 +124,7 @@ export default function HomeScreen() {
       onRequest: async () => {
         await requestRuntimePermission(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS, getRationale('Phone Numbers'));
       },
+      canOpenSettings: true,
     },
     {
       key: 'hasOverlayPermission',

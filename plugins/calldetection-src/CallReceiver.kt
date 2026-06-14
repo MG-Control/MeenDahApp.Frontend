@@ -90,13 +90,10 @@ class CallReceiver : BroadcastReceiver() {
             val serviceIntent = Intent(context, CallOverlayService::class.java).apply {
                 action = CallOverlayService.ACTION_HIDE
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
-            }
+            // Always use startService() for ACTION_HIDE since we don't need foreground service for it!
+            context.startService(serviceIntent)
         } catch (e: Exception) {
-            Log.e(TAG, "hideOverlayService failed: ${e.message}")
+            Log.e(TAG, "hideOverlayService failed: ${e.message}", e)
         }
     }
 
