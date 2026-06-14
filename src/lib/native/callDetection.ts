@@ -17,6 +17,18 @@ export const callDetection = {
     }
   },
 
+  setRefreshToken(token: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.setRefreshToken(token);
+    }
+  },
+
+  clearRefreshToken() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.clearRefreshToken();
+    }
+  },
+
   setApiBaseUrl(url: string) {
     if (isAndroid && CallDetectionModule) {
       CallDetectionModule.setApiBaseUrl(url);
@@ -54,6 +66,12 @@ export const callDetection = {
   async requestDefaultCallerIdApp(): Promise<boolean> {
     if (!isAndroid || !CallDetectionModule) return false;
     return CallDetectionModule.requestDefaultCallerIdApp();
+  },
+
+  openAppDetailsSettings() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openAppDetailsSettings();
+    }
   },
 
   openDefaultAppsSettings() {

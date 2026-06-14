@@ -145,16 +145,34 @@ export function useCallOverlay() {
     callDetection.setVersion(version);
   }, [accessToken]);
 
-  // Sync auth token
+  // Sync auth token and refresh token
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     if (accessToken) {
+      if (__DEV__) console.log('[CallOverlay] Syncing auth token to native');
       callDetection.setAuthToken(accessToken);
+      // Also pass refresh token from auth store
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (refreshToken) {
+        if (__DEV__) console.log('[CallOverlay] Syncing refresh token to native');
+        callDetection.setRefreshToken(refreshToken);
+      }
     } else {
+      if (__DEV__) console.log('[CallOverlay] Clearing auth tokens from native');
       callDetection.clearAuthToken();
+      callDetection.clearRefreshToken();
       permissionsRequested.current = false;
     }
   }, [accessToken]);
+  
+  // Also watch for refreshToken changes separately
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !accessToken) return;
+    const refreshToken = useAuthStore.getState().refreshToken;
+    if (refreshToken) {
+      callDetection.setRefreshToken(refreshToken);
+    }
+  }, [useAuthStore.getState().refreshToken]);
 
   // Request permissions every time app starts (or when user logs in)
   useEffect(() => {

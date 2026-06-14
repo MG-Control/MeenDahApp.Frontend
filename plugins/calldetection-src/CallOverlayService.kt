@@ -28,6 +28,8 @@ class CallOverlayService : Service() {
         const val ACTION_SHOW_SETUP_NOTIFICATION  = "com.meendah.app.SHOW_SETUP_NOTIFICATION"
         const val ACTION_HIDE_SETUP_NOTIFICATION  = "com.meendah.app.HIDE_SETUP_NOTIFICATION"
         const val EXTRA_PHONE_NUMBER = "phone_number"
+        const val EXTRA_AUTH_TOKEN = "auth_token"
+        const val EXTRA_BASE_URL = "base_url"
         const val CHANNEL_ID      = "meendah_call_channel"
         const val PERSISTENT_CHANNEL_ID = "meendah_persistent_channel"
         const val NOTIFICATION_ID = 7331
@@ -114,6 +116,21 @@ class CallOverlayService : Service() {
         val action = intent?.action
         val number = intent?.getStringExtra(EXTRA_PHONE_NUMBER) ?: ""
         Log.d(TAG, "onStartCommand action=$action number=[$number]")
+
+        // Save token & baseUrl from Intent extras if provided (more reliable than SharedPreferences timing)
+        val tokenFromIntent = intent?.getStringExtra(EXTRA_AUTH_TOKEN)
+        val baseUrlFromIntent = intent?.getStringExtra(EXTRA_BASE_URL)
+        if (!tokenFromIntent.isNullOrEmpty() || !baseUrlFromIntent.isNullOrEmpty()) {
+            Log.d(TAG, "onStartCommand: saving token/baseUrl from intent extras")
+            val editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            if (!tokenFromIntent.isNullOrEmpty()) {
+                editor.putString(PREF_TOKEN, tokenFromIntent)
+            }
+            if (!baseUrlFromIntent.isNullOrEmpty()) {
+                editor.putString(PREF_BASE_URL, baseUrlFromIntent)
+            }
+            editor.apply()
+        }
 
         // Make sure notification channels are created for any action that uses foreground service
         createNotificationChannel()
