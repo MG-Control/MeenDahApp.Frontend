@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Platform, TouchableOpacity, View, ActivityIndicator, PermissionsAndroid } from 'react-native';
+import { Alert, ScrollView, Platform, TouchableOpacity, View, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,9 +53,20 @@ export default function HomeScreen() {
   const handleRequestOverlay = async () => {
     if (__DEV__) console.log('[HomeScreen] handleRequestOverlay called');
     try {
+      // Try the native overlay settings first
       await requestOverlayPermission();
     } catch (e) {
-      if (__DEV__) console.error('[HomeScreen] handleRequestOverlay error:', e);
+      const errMsg = e instanceof Error ? e.message : String(e);
+      if (__DEV__) console.error('[HomeScreen] handleRequestOverlay error:', errMsg);
+      Alert.alert('Overlay Permission Error', `Failed to open overlay settings:\n${errMsg}\n\nWill try app settings instead.`);
+    }
+    // Always also open app settings as fallback (like notifications permission does)
+    try {
+      await openAppSettings();
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      if (__DEV__) console.error('[HomeScreen] openAppSettings error:', errMsg);
+      Alert.alert('App Settings Error', `Failed to open app settings:\n${errMsg}`);
     }
   };
 
@@ -309,7 +320,14 @@ export default function HomeScreen() {
               ) : (
                 <TouchableOpacity
                   style={[styles.syncButton, { backgroundColor: '#3c87f7', marginTop: 0, flex: 1 }]}
-                  onPress={() => callDetection.testShowOverlay('+201012345678')}
+                  onPress={async () => {
+                    try {
+                      await callDetection.testShowOverlay('+201012345678');
+                    } catch (e) {
+                      const errMsg = e instanceof Error ? e.message : String(e);
+                      Alert.alert('Test Overlay Error', `Error: ${errMsg}`);
+                    }
+                  }}
                 >
                   <Ionicons name="call" size={18} color="white" />
                   <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Show Overlay</ThemedText>
