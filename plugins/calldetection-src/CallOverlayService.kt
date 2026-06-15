@@ -201,11 +201,11 @@ class CallOverlayService : Service() {
         val notification = buildNotification(number)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Must use the correct FGS type for call identification
+                // Manifest declares foregroundServiceType="dataSync" — must match here.
                 startForeground(
                     NOTIFICATION_ID,
                     notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                 )
             } else {
                 startForeground(NOTIFICATION_ID, notification)
@@ -222,8 +222,24 @@ class CallOverlayService : Service() {
         }
     }
 
-    private fun canDrawOverlays(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)
+    private fun canDrawOverlays(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        if (Settings.canDrawOverlays(this)) return true
+        // Settings.canDrawOverlays() returns false on some OEM ROMs (Xiaomi, Samsung) even
+        // when the user has granted the permission. Fall back to AppOpsManager which is more reliable.
+        return try {
+            val appOps = getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+            val mode = appOps.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                android.os.Process.myUid(),
+                packageName
+            )
+            mode == android.app.AppOpsManager.MODE_ALLOWED || mode == android.app.AppOpsManager.MODE_DEFAULT
+        } catch (e: Exception) {
+            Log.w(TAG, "canDrawOverlays AppOps check failed: ${e.message}")
+            false
+        }
+    }
 
     private fun showOverlay(phoneNumber: String) {
         if (overlayView != null) {
@@ -278,8 +294,7 @@ class CallOverlayService : Service() {
         }
 
         if (phoneNumber.isNotEmpty()) {
-            showAvatarLoading(true)
-            fetchPhoneDetails(phoneNumber)
+            updateOverlayPhoneNumber(phoneNumber)
         }
     }
 
