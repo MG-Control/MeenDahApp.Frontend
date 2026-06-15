@@ -39,6 +39,7 @@ class CallOverlayService : Service() {
         const val PREF_BASE_URL = "base_url"
         const val PREF_THEME = "theme"
         const val PREF_VERSION = "version"
+        const val TOKEN_FILE_NAME = "meendah_auth_token"
     }
 
     // Brand colors
@@ -722,9 +723,19 @@ class CallOverlayService : Service() {
             if (loading) android.view.View.VISIBLE else android.view.View.GONE
     }
 
+    private fun readTokenFromFile(): String? {
+        return try {
+            val file = java.io.File(filesDir, TOKEN_FILE_NAME)
+            if (file.exists()) file.readText().trim().takeIf { it.isNotEmpty() } else null
+        } catch (e: Exception) {
+            Log.w(TAG, "readTokenFromFile failed: ${e.message}")
+            null
+        }
+    }
+
     private fun fetchPhoneDetails(phoneNumber: String) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val token = prefs.getString(PREF_TOKEN, null)
+        val token = prefs.getString(PREF_TOKEN, null) ?: readTokenFromFile()
         val baseUrl = prefs.getString(PREF_BASE_URL, "https://meendah.mg-control.com")?.trimEnd('/') ?: "https://meendah.mg-control.com"
 
         // Debug: log token status and show in overlay
