@@ -56,11 +56,22 @@ class CallDetectionModule(
     @ReactMethod
     fun setAuthToken(token: String) {
         prefs().edit().putString(CallOverlayService.PREF_TOKEN, token).apply()
+        // Also persist to file so the overlay service can read it even on cold start
+        // (when the JS bridge hasn't initialized yet and SharedPreferences might be stale)
+        try {
+            java.io.File(reactApplicationContext.filesDir, CallOverlayService.TOKEN_FILE_NAME)
+                .writeText(token)
+        } catch (e: Exception) {
+            Log.w(TAG, "setAuthToken: file write failed: ${e.message}")
+        }
     }
 
     @ReactMethod
     fun clearAuthToken() {
         prefs().edit().remove(CallOverlayService.PREF_TOKEN).apply()
+        try {
+            java.io.File(reactApplicationContext.filesDir, CallOverlayService.TOKEN_FILE_NAME).delete()
+        } catch (e: Exception) {}
     }
 
     @ReactMethod
