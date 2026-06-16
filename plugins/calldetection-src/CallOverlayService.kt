@@ -40,6 +40,7 @@ class CallOverlayService : Service() {
         const val PREF_BASE_URL = "base_url"
         const val PREF_THEME = "theme"
         const val PREF_VERSION = "version"
+        const val TOKEN_FILE_NAME = "meendah_auth_token"
     }
 
     // Brand colors
@@ -204,11 +205,11 @@ class CallOverlayService : Service() {
         val notification = buildNotification(number, false)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Must use the correct FGS type for call identification
+                // Manifest declares foregroundServiceType="dataSync" — must match here.
                 startForeground(
                     NOTIFICATION_ID,
                     notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                 )
             } else {
                 startForeground(NOTIFICATION_ID, notification)
@@ -240,8 +241,24 @@ class CallOverlayService : Service() {
         }
     }
 
-    private fun canDrawOverlays(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)
+    private fun canDrawOverlays(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        if (Settings.canDrawOverlays(this)) return true
+        // Settings.canDrawOverlays() returns false on some OEM ROMs (Xiaomi, Samsung) even
+        // when the user has granted the permission. Fall back to AppOpsManager which is more reliable.
+        return try {
+            val appOps = getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+            val mode = appOps.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                android.os.Process.myUid(),
+                packageName
+            )
+            mode == android.app.AppOpsManager.MODE_ALLOWED || mode == android.app.AppOpsManager.MODE_DEFAULT
+        } catch (e: Exception) {
+            Log.w(TAG, "canDrawOverlays AppOps check failed: ${e.message}")
+            false
+        }
+    }
 
     private fun showOverlay(phoneNumber: String) {
         if (overlayView != null) {
@@ -296,8 +313,7 @@ class CallOverlayService : Service() {
         }
 
         if (phoneNumber.isNotEmpty()) {
-            showAvatarLoading(true)
-            fetchPhoneDetails(phoneNumber)
+            updateOverlayPhoneNumber(phoneNumber)
         }
     }
 
@@ -740,9 +756,57 @@ class CallOverlayService : Service() {
             if (loading) android.view.View.VISIBLE else android.view.View.GONE
     }
 
+    private fun readTokenFromFile(): String? {
+        return try {
+            val file = java.io.File(filesDir, TOKEN_FILE_NAME)
+            if (file.exists()) file.readText().trim().takeIf { it.isNotEmpty() } else null
+        } catch (e: Exception) {
+            Log.w(TAG, "readTokenFromFile failed: ${e.message}")
+            null
+        }
+    }
+
+    // Read the access token directly from expo-secure-store's encrypted SharedPreferences.
+    // This is the most reliable source — it works even on cold start before the JS bridge runs.
+    // expo-secure-store (v55) stores data in "SecureStore" SharedPreferences using Android Keystore AES.
+    // Key format: "key_v1-{storageKey}", Keystore alias: "AES/GCM/NoPadding:key_v1:keystoreUnauthenticated"
+    // Zustand stores the auth state as: {"state":{"accessToken":"...","refreshToken":"..."},"version":0}
+    private fun readTokenFromExpoSecureStore(): String? {
+        return try {
+            val securePrefs = getSharedPreferences("SecureStore", Context.MODE_PRIVATE)
+            val encryptedJson = securePrefs.getString("key_v1-auth_auth_storage", null) ?: run {
+                Log.d(TAG, "readTokenFromExpoSecureStore: key not found in SecureStore")
+                return null
+            }
+            val encryptedItem = org.json.JSONObject(encryptedJson)
+            if (encryptedItem.optString("scheme") != "aes") return null
+
+            val ciphertextBytes = android.util.Base64.decode(encryptedItem.getString("ct"), android.util.Base64.DEFAULT)
+            val ivBytes = android.util.Base64.decode(encryptedItem.getString("iv"), android.util.Base64.DEFAULT)
+            val tlen = encryptedItem.getInt("tlen")
+
+            val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            val keyEntry = keyStore.getEntry("AES/GCM/NoPadding:key_v1:keystoreUnauthenticated", null)
+                as? java.security.KeyStore.SecretKeyEntry ?: return null
+
+            val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, keyEntry.secretKey, javax.crypto.spec.GCMParameterSpec(tlen, ivBytes))
+            val decryptedJson = String(cipher.doFinal(ciphertextBytes), java.nio.charset.StandardCharsets.UTF_8)
+
+            val state = org.json.JSONObject(decryptedJson).optJSONObject("state") ?: return null
+            val token = state.optString("accessToken", "")
+            Log.d(TAG, "readTokenFromExpoSecureStore: token found (len=${token.length})")
+            if (token.isNotEmpty() && token != "null") token else null
+        } catch (e: Exception) {
+            Log.w(TAG, "readTokenFromExpoSecureStore failed: ${e.message}")
+            null
+        }
+    }
+
     private fun fetchPhoneDetails(phoneNumber: String) {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val token = prefs.getString(PREF_TOKEN, null)
+        val token = prefs.getString(PREF_TOKEN, null) ?: readTokenFromFile() ?: readTokenFromExpoSecureStore()
         val baseUrl = prefs.getString(PREF_BASE_URL, "https://meendah.mg-control.com")?.trimEnd('/') ?: "https://meendah.mg-control.com"
 
         // Debug: log token status and show in overlay

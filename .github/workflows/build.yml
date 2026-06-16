@@ -1,11 +1,11 @@
-name: Build Android & iOS
+name: Build Android APK
 on:
   push:
     branches:
       - dev
       - master
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -18,7 +18,6 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           sudo docker image prune -af || true
           df -h
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -52,7 +51,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
           echo "tag=v${VERSION}-${CHANNEL}-${{ github.run_number }}" >> $GITHUB_OUTPUT
-
       - name: Build APK Locally
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
@@ -62,7 +60,6 @@ jobs:
         run: |
           APK=$(ls ./*.apk | head -n 1)
           mv "$APK" "./meendah-${{ steps.app_version.outputs.tag }}.apk"
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:

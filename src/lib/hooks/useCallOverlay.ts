@@ -154,6 +154,9 @@ export function useCallOverlay() {
   // Sync auth token and refresh token
   useEffect(() => {
     if (Platform.OS !== 'android') return;
+    // Wait until Zustand has rehydrated from storage — before that, accessToken is null
+    // even for logged-in users, and calling clearAuthToken() would wipe SharedPreferences.
+    if (!_hasHydrated) return;
     if (accessToken) {
       if (__DEV__) console.log('[CallOverlay] Syncing auth token to native');
       callDetection.setAuthToken(accessToken);
@@ -169,7 +172,7 @@ export function useCallOverlay() {
       callDetection.clearRefreshToken();
       permissionsRequested.current = false;
     }
-  }, [accessToken]);
+  }, [accessToken, _hasHydrated]);
   
   // Also watch for refreshToken changes separately
   useEffect(() => {
