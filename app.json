@@ -7,6 +7,9 @@
     "icon": "./assets/images/logo/meendah_english_light.png",
     "scheme": "meendah",
     "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.meendah.app"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#208AEF",
