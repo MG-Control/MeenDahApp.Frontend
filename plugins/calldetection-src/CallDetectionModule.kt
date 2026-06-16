@@ -45,6 +45,39 @@ class CallDetectionModule(
                 Log.d(TAG, "sendToReactNative skipped: no active Catalyst instance")
             }
         }
+
+        fun readTokenFromFile(context: android.content.Context): String? {
+            return try {
+                val file = java.io.File(context.filesDir, CallOverlayService.TOKEN_FILE_NAME)
+                if (file.exists()) file.readText().trim().takeIf { it.isNotEmpty() } else null
+            } catch (e: Exception) { null }
+        }
+
+        // Read access token directly from expo-secure-store — works even when JS bridge hasn't run.
+        // expo-secure-store v55 stores data in "SecureStore" SharedPreferences using Android Keystore AES.
+        fun readTokenFromExpoSecureStore(context: android.content.Context): String? {
+            return try {
+                val sp = context.getSharedPreferences("SecureStore", android.content.Context.MODE_PRIVATE)
+                val encryptedJson = sp.getString("key_v1-auth_auth_storage", null) ?: return null
+                val item = org.json.JSONObject(encryptedJson)
+                if (item.optString("scheme") != "aes") return null
+                val ct = android.util.Base64.decode(item.getString("ct"), android.util.Base64.DEFAULT)
+                val iv = android.util.Base64.decode(item.getString("iv"), android.util.Base64.DEFAULT)
+                val tlen = item.getInt("tlen")
+                val ks = java.security.KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
+                val keyEntry = ks.getEntry("AES/GCM/NoPadding:key_v1:keystoreUnauthenticated", null)
+                    as? java.security.KeyStore.SecretKeyEntry ?: return null
+                val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, keyEntry.secretKey, javax.crypto.spec.GCMParameterSpec(tlen, iv))
+                val json = String(cipher.doFinal(ct), java.nio.charset.StandardCharsets.UTF_8)
+                val state = org.json.JSONObject(json).optJSONObject("state") ?: return null
+                val token = state.optString("accessToken", "")
+                if (token.isNotEmpty() && token != "null") token else null
+            } catch (e: Exception) {
+                Log.w(TAG, "readTokenFromExpoSecureStore failed: ${e.message}")
+                null
+            }
+        }
     }
 
     override fun getName() = "CallDetectionModule"
@@ -352,9 +385,11 @@ class CallDetectionModule(
             Log.e(TAG, "[CallDetectionModule] NO OVERLAY PERMISSION - can't show overlay!")
             return
         }
-        // Read token and baseUrl from prefs to pass via Intent extras
+        // Read token from our prefs, then file, then fall back to expo-secure-store directly
         val prefs = prefs()
         val authToken = prefs.getString(CallOverlayService.PREF_TOKEN, null)
+            ?: Companion.readTokenFromFile(reactApplicationContext)
+            ?: Companion.readTokenFromExpoSecureStore(reactApplicationContext)
         val baseUrl = prefs.getString(CallOverlayService.PREF_BASE_URL, null)
         Log.d(TAG, "[CallDetectionModule] Token available: ${!authToken.isNullOrEmpty()}, baseUrl: ${!baseUrl.isNullOrEmpty()}")
 
