@@ -34,6 +34,7 @@ class CallOverlayService : Service() {
         const val PERSISTENT_CHANNEL_ID = "meendah_persistent_channel"
         const val NOTIFICATION_ID = 7331
         const val PERSISTENT_NOTIFICATION_ID = 7332
+        const val AFTER_CALL_NOTIFICATION_ID = 7333
         const val PREFS_NAME  = "meendah_call_prefs"
         const val PREF_TOKEN  = "auth_token"
         const val PREF_BASE_URL = "base_url"
@@ -59,6 +60,8 @@ class CallOverlayService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: android.view.View? = null
     private var overlayParams: WindowManager.LayoutParams? = null
+    private var hideOverlayJob: Job? = null
+    private var currentPhoneNumber: String = ""
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private fun isDarkTheme(): Boolean {
@@ -152,6 +155,7 @@ class CallOverlayService : Service() {
             }
             ACTION_SHOW -> {
                 // Always ensure foreground status immediately
+                currentPhoneNumber = number
                 startAsForeground(number)
                 val canDraw = canDrawOverlays()
                 Log.d(TAG, "Can draw overlays: $canDraw")
@@ -166,15 +170,14 @@ class CallOverlayService : Service() {
                 }
             }
             ACTION_HIDE -> {
-                // ALWAYS call startForeground() first to avoid the crash!
-                startForeground(PERSISTENT_NOTIFICATION_ID, buildSetupNotification())
-                // Then immediately stop foreground and remove the notification
-                try {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } catch (ignored: Exception) {
+                if (overlayView != null) {
+                    Log.d(TAG, "ACTION_HIDE: scheduling delayed overlay dismissal")
+                    showAfterCallNotification(currentPhoneNumber)
+                    scheduleHideOverlay(16000L)
+                } else {
+                    Log.d(TAG, "ACTION_HIDE: no overlay to hide, stopping self")
+                    stopSelf()
                 }
-                dismissOverlay()
-                stopSelf()
             }
             ACTION_SHOW_SETUP_NOTIFICATION -> {
                 Log.d(TAG, "ACTION_SHOW_SETUP_NOTIFICATION: starting foreground service with setup notification")
@@ -198,7 +201,7 @@ class CallOverlayService : Service() {
     }
 
     private fun startAsForeground(number: String) {
-        val notification = buildNotification(number)
+        val notification = buildNotification(number, false)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Must use the correct FGS type for call identification
@@ -219,6 +222,21 @@ class CallOverlayService : Service() {
             } catch (e2: Exception) {
                 Log.e(TAG, "Critical failure: could not start foreground service at all")
             }
+        }
+    }
+
+    private fun scheduleHideOverlay(delayMs: Long) {
+        hideOverlayJob?.cancel()
+        hideOverlayJob = scope.launch {
+            delay(delayMs)
+            if (overlayView != null) {
+                dismissOverlay()
+            }
+            try {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } catch (ignored: Exception) {
+            }
+            stopSelf()
         }
     }
 
@@ -327,25 +345,29 @@ class CallOverlayService : Service() {
 
     private fun updateOverlayPhoneNumber(phoneNumber: String) {
         if (overlayView == null || phoneNumber.isEmpty()) return
-        
+        currentPhoneNumber = phoneNumber
+
         val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
         
         // 1. Update phone label
         card.findViewWithTag<TextView>("phone_label")?.text = formatPhoneNumber(phoneNumber)
         
-        // 2. Check contacts immediately
+        // 2. Update details button action
+        card.findViewWithTag<android.view.View>("details_button")?.setOnClickListener { openInApp(phoneNumber) }
+
+        // 3. Check contacts immediately
         val contactName = getContactName(phoneNumber)
         card.findViewWithTag<TextView>("contact_info_label")?.apply {
             text = if (contactName != null) "👤 Saved as: $contactName" else "🔍 Not in contacts"
             visibility = android.view.View.VISIBLE
         }
 
-        // 3. Reset database info and show loading
+        // 4. Reset database info and show loading
         updateNameLabel("Searching MeenDah...")
         card.findViewWithTag<TextView>("also_known_as_label")?.visibility = android.view.View.GONE
         card.findViewWithTag<LinearLayout>("tags_row")?.visibility = android.view.View.GONE
         
-        // 4. Update country
+        // 5. Update country
         card.findViewWithTag<TextView>("country_label")?.let {
             val countryText = detectCountry(phoneNumber)
             it.text = countryText
@@ -497,6 +519,17 @@ class CallOverlayService : Service() {
             visibility = if (phoneNumber.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
         }
         infoColumn.addView(countryLabel)
+
+        val detailsButton = createActionButton("تفاصيل أكثر", BRAND_COLOR) {
+            openInApp(phoneNumber)
+        }.apply {
+            tag = "details_button"
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+        }
+        infoColumn.addView(detailsButton)
 
         avatarContainer.addView(infoColumn)
 
@@ -756,7 +789,7 @@ class CallOverlayService : Service() {
                 if (body != null) {
                     applyPhoneDetails(body)
                 } else {
-                    updateNameLabel("Not found in database")
+                    showMissingDatabaseInfo(phoneNumber)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "fetch error: ${e.message}")
@@ -852,6 +885,31 @@ class CallOverlayService : Service() {
         }
     }
 
+    private fun showMissingDatabaseInfo(phoneNumber: String) {
+        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
+        val contactName = getContactName(phoneNumber)
+        val displayText = contactName ?: formatPhoneNumber(phoneNumber)
+
+        card.findViewWithTag<TextView>("name_label")?.apply {
+            text = displayText
+            setTextColor(textPrimary)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        }
+
+        card.findViewWithTag<TextView>("contact_info_label")?.apply {
+            text = if (contactName != null) "👤 Saved contact" else "📞 Number not in contacts"
+            visibility = android.view.View.VISIBLE
+        }
+
+        card.findViewWithTag<TextView>("also_known_as_label")?.apply {
+            text = "Not found in MeenDah database"
+            visibility = android.view.View.VISIBLE
+        }
+
+        card.findViewWithTag<LinearLayout>("tags_row")?.visibility = android.view.View.GONE
+        showAvatarLoading(false)
+    }
+
     private fun updateNameLabel(text: String) {
         val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
         card.findViewWithTag<TextView>("name_label")?.let {
@@ -864,11 +922,14 @@ class CallOverlayService : Service() {
     // ─── Lifecycle ──────────────────────────────────────────
 
     private fun dismissOverlay() {
+        hideOverlayJob?.cancel()
+        hideOverlayJob = null
         overlayView?.let {
             try { windowManager?.removeView(it) } catch (_: Exception) {}
             overlayView = null
             Log.d(TAG, "Overlay dismissed")
         }
+        stopSelf()
     }
 
     private fun createNotificationChannel() {
@@ -893,19 +954,74 @@ class CallOverlayService : Service() {
         }
     }
 
-    private fun buildNotification(phoneNumber: String): Notification {
+    private fun buildNotification(phoneNumber: String, isAfterCall: Boolean = false): Notification {
+        val deepLinkUri = if (phoneNumber.isNotEmpty()) {
+            android.net.Uri.parse("meendah://phone/${java.net.URLEncoder.encode(phoneNumber, "UTF-8")}")
+        } else {
+            android.net.Uri.parse("meendah://")
+        }
+
         val pi = PendingIntent.getActivity(
-            this, 0, packageManager.getLaunchIntentForPackage(packageName),
+            this, 0, Intent(Intent.ACTION_VIEW, deepLinkUri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                setPackage(packageName)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        val title = if (isAfterCall) "Call ended" else "Incoming call"
+        val content = when {
+            phoneNumber.isEmpty() -> if (isAfterCall) "Tap to open Meendah" else "Looking up caller..."
+            isAfterCall -> "Tap to view details for ${formatPhoneNumber(phoneNumber)}"
+            else -> "Looking up ${formatPhoneNumber(phoneNumber)}..."
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Incoming call")
-            .setContentText(if (phoneNumber.isEmpty()) "Looking up caller..." else "Looking up $phoneNumber...")
+            .setContentTitle(title)
+            .setContentText(content)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentIntent(pi)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
+
+    private fun showAfterCallNotification(phoneNumber: String) {
+        try {
+            val deepLinkUri = if (phoneNumber.isNotEmpty()) {
+                android.net.Uri.parse("meendah://phone/${java.net.URLEncoder.encode(phoneNumber, "UTF-8")}")
+            } else {
+                android.net.Uri.parse("meendah://")
+            }
+            val pi = PendingIntent.getActivity(
+                this, 0, Intent(Intent.ACTION_VIEW, deepLinkUri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    setPackage(packageName)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val contentText = if (phoneNumber.isNotEmpty()) {
+                "انتهت المكالمة مع ${formatPhoneNumber(phoneNumber)}. اضغط للعرض"
+            } else {
+                "اضغط لفتح Meendah"
+            }
+
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("مكالمة انتهت")
+                .setContentText(contentText)
+                .setSmallIcon(android.R.drawable.sym_call_incoming)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setSilent(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .build()
+
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.notify(AFTER_CALL_NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "showAfterCallNotification error: ${e.message}")
+        }
     }
 
     private fun buildSetupNotification(): Notification {

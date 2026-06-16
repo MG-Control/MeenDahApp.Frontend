@@ -58,7 +58,7 @@ export default function HomeScreen() {
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       if (__DEV__) console.error('[HomeScreen] handleRequestOverlay error:', errMsg);
-      Alert.alert('Overlay Permission Error', `Failed to open overlay settings:\n${errMsg}\n\nWill try app settings instead.`);
+      Alert.alert(t('home.overlayPermErrorTitle'), t('home.overlayPermErrorMessage', { error: errMsg }));
     }
     // Always also open app settings as fallback (like notifications permission does)
     try {
@@ -66,7 +66,7 @@ export default function HomeScreen() {
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       if (__DEV__) console.error('[HomeScreen] openAppSettings error:', errMsg);
-      Alert.alert('App Settings Error', `Failed to open app settings:\n${errMsg}`);
+      Alert.alert(t('home.appSettingsErrorTitle'), t('home.appSettingsErrorMessage', { error: errMsg }));
     }
   };
 
@@ -81,18 +81,18 @@ export default function HomeScreen() {
 
   // --- Common Rationale ---
   const getRationale = (permName: string) => ({
-    title: `Allow ${permName}`,
-    message: `Meendah needs this permission to identify who is calling you.`,
-    buttonPositive: 'Allow',
-    buttonNegative: 'Not Now',
+    title: t('home.allowPermission', { permName }),
+    message: t('home.permissionRationaleMessage'),
+    buttonPositive: t('common.allow'),
+    buttonNegative: t('common.notNow'),
   });
 
   // --- Permission Configs ---
   const permissionsList = [
     {
       key: 'hasPostNotifications',
-      title: 'Allow Notifications',
-      desc: 'Show setup notifications to set Meendah as your caller ID app',
+      title: t('home.permAllowNotifications'),
+      desc: t('home.permDescNotifications'),
       icon: 'notifications',
       perm: PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       isGranted: permissions.hasPostNotifications,
@@ -103,8 +103,8 @@ export default function HomeScreen() {
     },
     {
       key: 'hasReadContacts',
-      title: 'Read Contacts',
-      desc: 'Identify callers saved in your contacts and show their names',
+      title: t('home.permReadContacts'),
+      desc: t('home.permDescReadContacts'),
       icon: 'people',
       perm: PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
       isGranted: permissions.hasReadContacts,
@@ -115,8 +115,8 @@ export default function HomeScreen() {
     },
     {
       key: 'hasReadPhoneState',
-      title: 'Read Phone State',
-      desc: 'Required to detect incoming phone calls',
+      title: t('home.permReadPhoneState'),
+      desc: t('home.permDescReadPhoneState'),
       icon: 'phone-portrait',
       perm: PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
       isGranted: permissions.hasReadPhoneState,
@@ -127,8 +127,8 @@ export default function HomeScreen() {
     },
     {
       key: 'hasReadCallLog',
-      title: 'Read Call Log',
-      desc: 'Help identify callers from your call history',
+      title: t('home.permReadCallLog'),
+      desc: t('home.permDescReadCallLog'),
       icon: 'call',
       perm: PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
       isGranted: permissions.hasReadCallLog,
@@ -139,8 +139,8 @@ export default function HomeScreen() {
     },
     {
       key: 'hasReadPhoneNumbers',
-      title: 'Read Phone Numbers',
-      desc: 'Allow access to phone numbers to identify callers',
+      title: t('home.permReadPhoneNumbers'),
+      desc: t('home.permDescReadPhoneNumbers'),
       icon: 'keypad',
       perm: PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS,
       isGranted: permissions.hasReadPhoneNumbers,
@@ -151,8 +151,8 @@ export default function HomeScreen() {
     },
     {
       key: 'hasOverlayPermission',
-      title: 'Display Over Other Apps',
-      desc: 'Show the call overlay popup when a call comes in',
+      title: t('home.permDisplayOverOtherApps'),
+      desc: t('home.permDescOverlay'),
       icon: 'eye',
       isGranted: permissions.hasOverlayPermission,
       onRequest: handleRequestOverlay,
@@ -160,8 +160,8 @@ export default function HomeScreen() {
     },
     {
       key: 'isDefaultCallerId',
-      title: 'Default Caller ID & Spam App',
-      desc: 'This is the most important! Without this, nothing works!',
+      title: t('home.permDefaultCallerId'),
+      desc: t('home.permDescDefaultCallerId'),
       icon: 'shield-checkmark',
       isGranted: permissions.isDefaultCallerId,
       onRequest: handleRequestDefault,
@@ -169,8 +169,8 @@ export default function HomeScreen() {
     },
     {
       key: 'isIgnoringBattery',
-      title: 'Ignore Battery Optimizations',
-      desc: 'Allow Meendah to run in the background to detect calls',
+      title: t('home.permIgnoreBattery'),
+      desc: t('home.permDescIgnoreBattery'),
       icon: 'battery-charging',
       isGranted: permissions.isIgnoringBattery,
       onRequest: handleRequestBattery,
@@ -210,12 +210,12 @@ export default function HomeScreen() {
       <ThemedView style={styles.container}>
         <ThemedText type="title">{t('common.appName')}</ThemedText>
         <ThemedText style={styles.welcomeText}>
-          {t('auth.welcome')}, {user?.displayName || user?.email || 'User'}!
+          {t('auth.welcome')}, {user?.displayName || user?.email || t('auth.defaultUserName')}!
         </ThemedText>
 
         {Platform.OS === 'android' && (
           <ThemedText type="subtitle" style={{ marginTop: Spacing.two }}>
-            Required Permissions
+            {t('home.requiredPermissions')}
           </ThemedText>
         )}
 
@@ -284,7 +284,7 @@ export default function HomeScreen() {
                         color="white"
                       />
                       <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
-                        {perm.needsSettings ? 'Open Settings' : 'Allow'}
+                        {perm.needsSettings ? t('home.openSettings') : t('common.allow')}
                       </ThemedText>
                     </>
                   )}
@@ -304,9 +304,9 @@ export default function HomeScreen() {
         {/* Test Buttons - For Development */}
         {__DEV__ && Platform.OS === 'android' && (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">🛠️ Test Overlay</ThemedText>
+            <ThemedText type="subtitle">{t('home.testOverlay')}</ThemedText>
             <ThemedText themeColor="textSecondary" style={{ marginBottom: 12 }}>
-              Test the incoming call overlay without waiting for a call.
+              {t('home.testOverlayDesc')}
             </ThemedText>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {permissions.hasOverlayPermission === false ? (
@@ -315,7 +315,7 @@ export default function HomeScreen() {
                   onPress={handleRequestOverlay}
                 >
                   <Ionicons name="apps-outline" size={18} color="white" />
-                  <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Allow Overlay First</ThemedText>
+                  <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>{t('home.allowOverlayFirst')}</ThemedText>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -325,12 +325,12 @@ export default function HomeScreen() {
                       await callDetection.testShowOverlay('+201012345678');
                     } catch (e) {
                       const errMsg = e instanceof Error ? e.message : String(e);
-                      Alert.alert('Test Overlay Error', `Error: ${errMsg}`);
+                      Alert.alert(t('home.testOverlayErrorTitle'), t('home.testOverlayErrorMessage', { error: errMsg }));
                     }
                   }}
                 >
                   <Ionicons name="call" size={18} color="white" />
-                  <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Show Overlay</ThemedText>
+                  <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>{t('home.showOverlay')}</ThemedText>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -338,7 +338,7 @@ export default function HomeScreen() {
                 onPress={() => callDetection.testHideOverlay()}
               >
                 <Ionicons name="close-circle" size={18} color="white" />
-                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Hide</ThemedText>
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>{t('home.hideOverlay')}</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>
