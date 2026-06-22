@@ -362,14 +362,17 @@ class CallDetectionModule(
     fun openOverlayMethodSpecialAccess() {
         Log.d(TAG, "openOverlayMethodSpecialAccess called")
         try {
-            val intent = Intent(Settings.ACTION_MANAGE_SPECIAL_APP_ACCESS_WHITELIST).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            }
+            // Use the string directly since Settings.ACTION_MANAGE_SPECIAL_APP_ACCESS_WHITELIST
+            // is not available in all SDK versions used for compilation
+            val intent = Intent("android.settings.MANAGE_SPECIAL_APP_ACCESS_WHITELIST")
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             reactApplicationContext.startActivity(intent)
-            Log.d(TAG, "openOverlayMethodSpecialAccess: SUCCESS via ACTION_MANAGE_SPECIAL_APP_ACCESS_WHITELIST")
+            Log.d(TAG, "openOverlayMethodSpecialAccess: SUCCESS via MANAGE_SPECIAL_APP_ACCESS_WHITELIST")
         } catch (e: Exception) {
             Log.e(TAG, "openOverlayMethodSpecialAccess failed: ${e.message}", e)
+            // Fallback to app details settings
+            openAppDetailsSettings()
         }
     }
 
