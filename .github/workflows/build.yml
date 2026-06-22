@@ -111,8 +111,19 @@ jobs:
           echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
           echo "tag=v${VERSION}-${CHANNEL}-${{ github.run_number }}" >> $GITHUB_OUTPUT
 
+      - name: Setup iOS Credentials
+        env:
+          EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+          EXPO_APPLE_ID_PASSWORD: ${{ secrets.EXPO_APPLE_ID_PASSWORD }}
+          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          echo "Configuring iOS credentials for non-interactive build..."
+          eas credentials:configure-build --platform ios --profile preview --non-interactive 2>&1 || echo "Credentials setup may require interactive mode. Build will attempt anyway."
+
       - name: Build IPA via EAS
         env:
+          EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+          EXPO_APPLE_ID_PASSWORD: ${{ secrets.EXPO_APPLE_ID_PASSWORD }}
           EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
         run: eas build --platform ios --profile preview --non-interactive
 

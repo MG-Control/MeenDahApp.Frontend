@@ -35,6 +35,35 @@ import { styles } from './styles';
 
 const BRAND_COLOR = '#3c87f7';
 
+function stripPlus(phone: string): string {
+  return phone.replace(/^\+/, '');
+}
+
+function getWhatsAppUrl(phone: string, dbUrl?: string | null): string {
+  if (dbUrl) return dbUrl;
+  return `https://wa.me/${stripPlus(phone)}`;
+}
+
+function getTelegramUrl(phone: string, dbUrl?: string | null): string {
+  if (dbUrl) return dbUrl;
+  return `https://t.me/+${stripPlus(phone)}`;
+}
+
+function getViberUrl(phone: string, dbUrl?: string | null): string {
+  if (dbUrl) return dbUrl;
+  return `viber://chat?number=${phone}`;
+}
+
+function getSignalUrl(phone: string, dbUrl?: string | null): string {
+  if (dbUrl) return dbUrl;
+  return `https://signal.me/#p/${phone}`;
+}
+
+function getSkypeUrl(phone: string, dbUrl?: string | null): string {
+  if (dbUrl) return dbUrl;
+  return `skype:${phone}?chat`;
+}
+
 function tagAlreadyExists(
   tags: PhoneDetails['tags'] | undefined,
   tagId: number
@@ -403,79 +432,72 @@ export default function PhoneDetailScreen() {
                 </TouchableOpacity>
               </View>
 
-              {(displayData?.facebookUrl || displayData?.whatsappUrl || displayData?.telegramUrl || displayData?.viberUrl || displayData?.signalUrl || displayData?.skypeUrl || displayData?.messengerUrl) && (
                 <View style={styles.socialActionRow}>
-                  {displayData?.facebookUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#1877f2' }]}
-                      onPress={() => handleOpenFacebook(displayData.facebookUrl)}
-                    >
-                      <Ionicons name="logo-facebook" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.facebook')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#1877f2' }, !displayData?.facebookUrl && styles.socialActionButtonDisabled]}
+                    onPress={() => displayData?.facebookUrl && handleOpenFacebook(displayData.facebookUrl)}
+                    disabled={!displayData?.facebookUrl}
+                    activeOpacity={displayData?.facebookUrl ? 0.7 : 1}
+                  >
+                    <Ionicons name="logo-facebook" size={18} color={displayData?.facebookUrl ? 'white' : 'rgba(255,255,255,0.4)'} />
+                    <ThemedText style={[styles.socialActionText, !displayData?.facebookUrl && styles.socialActionTextDisabled]}>{t('phone.facebook')}</ThemedText>
+                  </TouchableOpacity>
 
-                  {displayData?.messengerUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#0084ff' }]}
-                      onPress={() => handleOpenLink(displayData.messengerUrl)}
-                    >
-                      <Ionicons name="chatbubble-outline" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.messenger')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#0084ff' }, !displayData?.messengerUrl && styles.socialActionButtonDisabled]}
+                    onPress={() => displayData?.messengerUrl && handleOpenLink(displayData.messengerUrl)}
+                    disabled={!displayData?.messengerUrl}
+                    activeOpacity={displayData?.messengerUrl ? 0.7 : 1}
+                  >
+                    <Ionicons name="chatbubble-outline" size={18} color={displayData?.messengerUrl ? 'white' : 'rgba(255,255,255,0.4)'} />
+                    <ThemedText style={[styles.socialActionText, !displayData?.messengerUrl && styles.socialActionTextDisabled]}>{t('phone.messenger')}</ThemedText>
+                  </TouchableOpacity>
 
-                  {displayData?.whatsappUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#25d366' }]}
-                      onPress={() => handleOpenLink(displayData.whatsappUrl)}
-                    >
-                      <Ionicons name="logo-whatsapp" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.whatsapp')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#25d366' }]}
+                    onPress={() => handleOpenLink(getWhatsAppUrl(phoneNumber, displayData?.whatsappUrl))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="logo-whatsapp" size={18} color="white" />
+                    <ThemedText style={styles.socialActionText}>{t('phone.whatsapp')}</ThemedText>
+                  </TouchableOpacity>
 
-                  {displayData?.telegramUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#229ed9' }]}
-                      onPress={() => handleOpenLink(displayData.telegramUrl)}
-                    >
-                      <Ionicons name="paper-plane" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.telegram')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#229ed9' }]}
+                    onPress={() => handleOpenLink(getTelegramUrl(phoneNumber, displayData?.telegramUrl))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="paper-plane" size={18} color="white" />
+                    <ThemedText style={styles.socialActionText}>{t('phone.telegram')}</ThemedText>
+                  </TouchableOpacity>
 
-                  {displayData?.viberUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#7360f2' }]}
-                      onPress={() => handleOpenLink(displayData.viberUrl)}
-                    >
-                      <Ionicons name="chatbubble-ellipses-outline" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.viber')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#7360f2' }]}
+                    onPress={() => handleOpenLink(getViberUrl(phoneNumber, displayData?.viberUrl))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={18} color="white" />
+                    <ThemedText style={styles.socialActionText}>{t('phone.viber')}</ThemedText>
+                  </TouchableOpacity>
 
-                  {displayData?.signalUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#3a76f0' }]}
-                      onPress={() => handleOpenLink(displayData.signalUrl)}
-                    >
-                      <Ionicons name="shield-outline" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.signal')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#3a76f0' }]}
+                    onPress={() => handleOpenLink(getSignalUrl(phoneNumber, displayData?.signalUrl))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="shield-outline" size={18} color="white" />
+                    <ThemedText style={styles.socialActionText}>{t('phone.signal')}</ThemedText>
+                  </TouchableOpacity>
 
-                  {displayData?.skypeUrl ? (
-                    <TouchableOpacity
-                      style={[styles.socialActionButton, { backgroundColor: '#00aff0' }]}
-                      onPress={() => handleOpenLink(displayData.skypeUrl)}
-                    >
-                      <Ionicons name="call-outline" size={18} color="white" />
-                      <ThemedText style={styles.socialActionText}>{t('phone.skype')}</ThemedText>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.socialActionButton, { backgroundColor: '#00aff0' }]}
+                    onPress={() => handleOpenLink(getSkypeUrl(phoneNumber, displayData?.skypeUrl))}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="call-outline" size={18} color="white" />
+                    <ThemedText style={styles.socialActionText}>{t('phone.skype')}</ThemedText>
+                  </TouchableOpacity>
                 </View>
-              )}
             </View>
           </SafeAreaView>
         </View>

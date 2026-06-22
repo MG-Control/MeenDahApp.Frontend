@@ -2,13 +2,16 @@
   "expo": {
     "name": "meendah",
     "slug": "meendah",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/images/logo/meendah_english_light.png",
     "scheme": "meendah",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.meendah.app"
+      "bundleIdentifier": "com.meendah.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {

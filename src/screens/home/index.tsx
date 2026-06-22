@@ -308,6 +308,7 @@ export default function HomeScreen() {
             <ThemedText themeColor="textSecondary" style={{ marginBottom: 12 }}>
               {t('home.testOverlayDesc')}
             </ThemedText>
+            {/* Show/Hide Overlay (existing) */}
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {permissions.hasOverlayPermission === false ? (
                 <TouchableOpacity
@@ -339,6 +340,87 @@ export default function HomeScreen() {
               >
                 <Ionicons name="close-circle" size={18} color="white" />
                 <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>{t('home.hideOverlay')}</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* Separator */}
+            <View style={{ height: 1, backgroundColor: theme.textSecondary + '30', marginVertical: 12 }} />
+
+            {/* Current Status */}
+            <ThemedText type="subtitle" style={{ fontSize: 14, marginBottom: 8 }}>
+              Status: {permissions.hasOverlayPermission === null ? 'Checking...' :
+                permissions.hasOverlayPermission ? 'Enabled (granted)' : 'Disabled (not granted)'}
+            </ThemedText>
+
+            {/* Experimental: Multiple overlay settings methods */}
+            <ThemedText type="subtitle" style={{ fontSize: 14, marginBottom: 8, color: '#FF9500' }}>
+              -- Experimental Overlay Openers --
+            </ThemedText>
+            <View style={{ gap: 8 }}>
+              {/* 1. Action: Open overlay settings directly */}
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#5856D6', marginTop: 0 }]}
+                onPress={() => callDetection.openOverlayMethodSettingsAction()}
+              >
+                <Ionicons name="settings-outline" size={18} color="white" />
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 13, flex: 1 }}>
+                  {t('home.experimentalMethod1')}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* 2. Action: Special app access */}
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#FF2D55', marginTop: 0 }]}
+                onPress={() => callDetection.openOverlayMethodSpecialAccess()}
+              >
+                <Ionicons name="settings-outline" size={18} color="white" />
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 13, flex: 1 }}>
+                  {t('home.experimentalMethod2')}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* 3. Action: All apps that can draw overlay */}
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#30D158', marginTop: 0 }]}
+                onPress={() => callDetection.openOverlayMethodAllAppsDrawOver()}
+              >
+                <Ionicons name="settings-outline" size={18} color="white" />
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 13, flex: 1 }}>
+                  {t('home.experimentalMethod3')}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* 4. Action: App details deep link */}
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#007AFF', marginTop: 0 }]}
+                onPress={() => callDetection.openOverlayMethodAppDetailsDeepLink()}
+              >
+                <Ionicons name="settings-outline" size={18} color="white" />
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 13, flex: 1 }}>
+                  {t('home.experimentalMethod4')}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* 5. Action: Xiaomi specific */}
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#FF6482', marginTop: 0 }]}
+                onPress={() => callDetection.openOverlayMethodXiaomi()}
+              >
+                <Ionicons name="settings-outline" size={18} color="white" />
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 13, flex: 1 }}>
+                  {t('home.experimentalMethod5')}
+                </ThemedText>
+              </TouchableOpacity>
+
+              {/* 6. Open App Settings (the original button - kept as is) */}
+              <TouchableOpacity
+                style={[styles.syncButton, { backgroundColor: '#8E8E98', marginTop: 0 }]}
+                onPress={handleRequestOverlay}
+              >
+                <Ionicons name="apps-outline" size={18} color="white" />
+                <ThemedText style={{ color: 'white', fontWeight: '600', fontSize: 13, flex: 1 }}>
+                  {t('home.openAppSettings')}
+                </ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>
