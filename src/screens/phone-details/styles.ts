@@ -135,6 +135,12 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  socialActionTextDisabled: {
+    color: 'rgba(255,255,255,0.4)',
+  },
+  socialActionButtonDisabled: {
+    opacity: 0.35,
+  },
   content: {
     paddingHorizontal: Spacing.four,
     marginTop: -20,

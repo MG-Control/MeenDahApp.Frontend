@@ -197,7 +197,13 @@
     "permDefaultCallerId": "Default Caller ID & Spam App",
     "permDescDefaultCallerId": "This is the most important! Without this, nothing works!",
     "permIgnoreBattery": "Ignore Battery Optimizations",
-    "permDescIgnoreBattery": "Allow Meendah to run in the background to detect calls"
+    "permDescIgnoreBattery": "Allow Meendah to run in the background to detect calls",
+    "openAppSettings": "Open App Settings (original)",
+    "experimentalMethod1": "Method 1: ACTION_MANAGE_OVERLAY_PERMISSION (with package)",
+    "experimentalMethod2": "Method 2: Special App Access (whitelist)",
+    "experimentalMethod3": "Method 3: All apps that can draw overlay",
+    "experimentalMethod4": "Method 4: App Details (deep link)",
+    "experimentalMethod5": "Method 5: Xiaomi/ MIUI specific"
   },
   "tabs": {
     "home": "Home",

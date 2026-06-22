@@ -336,6 +336,122 @@ class CallDetectionModule(
         }
     }
 
+    // ========================
+    // EXPERIMENTAL: Multiple approaches to directly open overlay/appear-on-top settings
+    // ========================
+
+    @ReactMethod
+    fun openOverlayMethodSettingsAction() {
+        Log.d(TAG, "openOverlayMethodSettingsAction called")
+        try {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${reactApplicationContext.packageName}")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            reactApplicationContext.startActivity(intent)
+            Log.d(TAG, "openOverlayMethodSettingsAction: SUCCESS via ACTION_MANAGE_OVERLAY_PERMISSION with package URI")
+        } catch (e: Exception) {
+            Log.e(TAG, "openOverlayMethodSettingsAction failed: ${e.message}", e)
+        }
+    }
+
+    @ReactMethod
+    fun openOverlayMethodSpecialAccess() {
+        Log.d(TAG, "openOverlayMethodSpecialAccess called")
+        try {
+            val intent = Intent(Settings.ACTION_MANAGE_SPECIAL_APP_ACCESS_WHITELIST).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            reactApplicationContext.startActivity(intent)
+            Log.d(TAG, "openOverlayMethodSpecialAccess: SUCCESS via ACTION_MANAGE_SPECIAL_APP_ACCESS_WHITELIST")
+        } catch (e: Exception) {
+            Log.e(TAG, "openOverlayMethodSpecialAccess failed: ${e.message}", e)
+        }
+    }
+
+    @ReactMethod
+    fun openOverlayMethodAllAppsDrawOver() {
+        Log.d(TAG, "openOverlayMethodAllAppsDrawOver called")
+        // Try to open the "Apps that can appear on top" list directly (no package filter)
+        try {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            reactApplicationContext.startActivity(intent)
+            Log.d(TAG, "openOverlayMethodAllAppsDrawOver: SUCCESS via generic ACTION_MANAGE_OVERLAY_PERMISSION")
+        } catch (e: Exception) {
+            Log.e(TAG, "openOverlayMethodAllAppsDrawOver failed: ${e.message}", e)
+        }
+    }
+
+    @ReactMethod
+    fun openOverlayMethodXiaomi() {
+        Log.d(TAG, "openOverlayMethodXiaomi called")
+        // Try multiple Xiaomi-specific intents for overlay permissions
+        val intentsToTry = listOf(
+            // Method 1: Xiaomi MiuiSettings -> Additional settings -> App permissions
+            Intent("com.android.settings.APP_PERMISSIONS").apply {
+                data = Uri.parse("package:${reactApplicationContext.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Method 2: Xiaomi Security app permissions
+            Intent("com.miui.securitycenter.permission.PermissionReviewActivity").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Method 3: MIUI permissions manager
+            Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+                data = Uri.parse("package:${reactApplicationContext.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            // Method 4: try MIUI security center
+            Intent("com.miui.permcenter.permissions.AppPermissionsEditorActivity").apply {
+                data = Uri.parse("package:${reactApplicationContext.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+
+        for (intent in intentsToTry) {
+            try {
+                if (intent.resolveActivity(reactApplicationContext.packageManager) != null) {
+                    reactApplicationContext.startActivity(intent)
+                    Log.d(TAG, "openOverlayMethodXiaomi: SUCCESS via ${intent.action}")
+                    return
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "openOverlayMethodXiaomi: tried ${intent.action} but failed: ${e.message}")
+            }
+        }
+        Log.e(TAG, "openOverlayMethodXiaomi: ALL MIUI intents failed, falling back to app details")
+        openAppDetailsSettings()
+    }
+
+    @ReactMethod
+    fun openOverlayMethodAppDetailsDeepLink() {
+        Log.d(TAG, "openOverlayMethodAppDetailsDeepLink called")
+        try {
+            // Try to use ACTION_APPLICATION_DETAILS_SETTINGS with a different approach
+            // Some OEMs show a "Display over other apps" option in app details
+            val intent = Intent().apply {
+                action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                data = Uri.fromParts("package", reactApplicationContext.packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                // On some Samsung/OneUI devices, this extra helps show the overlay option
+                putExtra("android.provider.extra.APP_PACKAGE", reactApplicationContext.packageName)
+            }
+            reactApplicationContext.startActivity(intent)
+            Log.d(TAG, "openOverlayMethodAppDetailsDeepLink: SUCCESS")
+        } catch (e: Exception) {
+            Log.e(TAG, "openOverlayMethodAppDetailsDeepLink failed: ${e.message}", e)
+            openAppDetailsSettings()
+        }
+    }
+
     @ReactMethod
     fun isDefaultCallerIdApp(promise: Promise) {
         try {

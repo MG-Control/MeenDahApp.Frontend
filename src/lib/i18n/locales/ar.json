@@ -181,7 +181,13 @@
     "permDefaultCallerId": "تطبيق تعريف المتصل الافتراضي والحماية من الإزعاج",
     "permDescDefaultCallerId": "هذا هو الأهم! بدونه لا يعمل شيء!",
     "permIgnoreBattery": "تجاهل تحسينات البطارية",
-    "permDescIgnoreBattery": "السماح لمين ده بالعمل في الخلفية للكشف عن المكالمات"
+    "permDescIgnoreBattery": "السماح لمين ده بالعمل في الخلفية للكشف عن المكالمات",
+    "openAppSettings": "فتح إعدادات التطبيق (الأصلي)",
+    "experimentalMethod1": "الطريقة 1: فتح إعدادات الظهور فوق التطبيقات (مع package)",
+    "experimentalMethod2": "الطريقة 2: قائمة الوصول الخاص (Special App Access)",
+    "experimentalMethod3": "الطريقة 3: كل التطبيقات التي يمكنها الظهور فوق التطبيقات",
+    "experimentalMethod4": "الطريقة 4: تفاصيل التطبيق (رابط عميق)",
+    "experimentalMethod5": "الطريقة 5: شاومي / MIUI"
   },
   "tabs": {
     "home": "الرئيسية",

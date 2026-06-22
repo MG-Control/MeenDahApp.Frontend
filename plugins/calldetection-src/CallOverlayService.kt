@@ -391,6 +391,7 @@ class CallOverlayService : Service() {
         }
         
         showAvatarLoading(true)
+        showActionButtons(false)
         fetchPhoneDetails(phoneNumber)
     }
 
@@ -417,6 +418,11 @@ class CallOverlayService : Service() {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(6), dp(12), dp(6))
+            // Set the same background color as the card to fix gray edges behind rounded corners
+            background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                cornerRadius = dp(20).toFloat()
+            }
         }
 
         val card = LinearLayout(this).apply {
@@ -562,7 +568,36 @@ class CallOverlayService : Service() {
             ).apply { topMargin = dp(4) }
         }
 
-        // ── Tags row ──
+        // ── Retry / Callback buttons row (hidden by default) ──
+        val actionButtonsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            tag = "action_buttons_row"
+            visibility = android.view.View.GONE
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+        }
+
+        // Call back button
+        val callBackButton = createActionButton("Callback", Color.parseColor("#34C759")) {
+            callPhoneNumber(currentPhoneNumber)
+        }.apply {
+            tag = "callback_button"
+        }
+
+        // Retry fetch button
+        val retryButton = createActionButton("Retry", Color.parseColor("#FF9500")) {
+            retryFetchPhoneDetails(currentPhoneNumber)
+        }.apply {
+            tag = "retry_button"
+        }
+
+        actionButtonsRow.addView(callBackButton)
+        actionButtonsRow.addView(retryButton)
+
+        // ── Tags row (wrap content inside a horizontal scroll if needed) ──
         val tagsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             tag = "tags_row"
@@ -604,6 +639,7 @@ class CallOverlayService : Service() {
         card.addView(divider)
         card.addView(avatarContainer)
         card.addView(spamBadge)
+        card.addView(actionButtonsRow)
         card.addView(tagsRow)
         card.addView(tokenDebugLabel)
         card.addView(versionLabel)
@@ -865,6 +901,8 @@ class CallOverlayService : Service() {
                     it.visibility = android.view.View.VISIBLE
                 }
                 updateNameLabel("Could not fetch caller info")
+                // Show retry and callback buttons on error
+                showActionButtons(true)
             }
         }
     }
@@ -971,6 +1009,7 @@ class CallOverlayService : Service() {
         }
 
         card.findViewWithTag<LinearLayout>("tags_row")?.visibility = android.view.View.GONE
+        showActionButtons(true)
         showAvatarLoading(false)
     }
 
@@ -981,6 +1020,46 @@ class CallOverlayService : Service() {
             it.setTextColor(textSecondary)
             it.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         }
+    }
+
+    // Show action buttons (callback + retry)
+    private fun showActionButtons(show: Boolean) {
+        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
+        card.findViewWithTag<LinearLayout>("action_buttons_row")?.visibility =
+            if (show) android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    // Call the phone number using ACTION_DIAL
+    private fun callPhoneNumber(phoneNumber: String) {
+        try {
+            val cleaned = phoneNumber.replace(Regex("[^\\d+]"), "")
+            val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+                data = android.net.Uri.parse("tel:$cleaned")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(dialIntent)
+            Log.d(TAG, "callPhoneNumber: opened dialer for $cleaned")
+        } catch (e: Exception) {
+            Log.e(TAG, "callPhoneNumber failed: ${e.message}")
+        }
+    }
+
+    // Retry fetching phone details (with retry count to avoid infinite loops)
+    private var retryCount = 0
+    private fun retryFetchPhoneDetails(phoneNumber: String) {
+        if (phoneNumber.isEmpty()) return
+        Log.d(TAG, "retryFetchPhoneDetails: attempt ${retryCount + 1}")
+        retryCount++
+        // Show loading again
+        showAvatarLoading(true)
+        updateNameLabel("Retrying... (${retryCount})")
+        showActionButtons(false)
+        // Clear token debug label
+        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout
+        card?.findViewWithTag<TextView>("token_debug_label")?.visibility = android.view.View.GONE
+        card?.findViewWithTag<TextView>("also_known_as_label")?.visibility = android.view.View.GONE
+        // Attempt fresh fetch
+        fetchPhoneDetails(phoneNumber)
     }
 
     // ─── Lifecycle ──────────────────────────────────────────

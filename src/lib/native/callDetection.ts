@@ -115,4 +115,44 @@ export const callDetection = {
       CallDetectionModule.hidePersistentNotification();
     }
   },
+
+  // ========================
+  // EXPERIMENTAL OVERLAY METHODS
+  // These try different Android intents to open the overlay/appear-on-top settings
+  // ========================
+
+  // Action: Settings.ACTION_MANAGE_OVERLAY_PERMISSION with package URI + clear-top flags
+  openOverlayMethodSettingsAction() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openOverlayMethodSettingsAction();
+    }
+  },
+
+  // Action: Settings.ACTION_MANAGE_SPECIAL_APP_ACCESS_WHITELIST
+  openOverlayMethodSpecialAccess() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openOverlayMethodSpecialAccess();
+    }
+  },
+
+  // Action: Settings.ACTION_MANAGE_OVERLAY_PERMISSION (generic, no package filter)
+  openOverlayMethodAllAppsDrawOver() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openOverlayMethodAllAppsDrawOver();
+    }
+  },
+
+  // Xiaomi-specific intents for overlay permissions
+  openOverlayMethodXiaomi() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openOverlayMethodXiaomi();
+    }
+  },
+
+  // App details settings deep link (with extra package param for better OEM support)
+  openOverlayMethodAppDetailsDeepLink() {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.openOverlayMethodAppDetailsDeepLink();
+    }
+  },
 };
