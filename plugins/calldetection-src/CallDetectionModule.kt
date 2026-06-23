@@ -215,6 +215,32 @@ class CallDetectionModule(
                 Log.w(TAG, "hasOverlayPermission: check4 failed: ${e.message}")
             }
 
+            // Check 5: Try to actually add a 1x1 pixel overlay to test if it works
+            // Some OEMs (Xiaomi, Huawei, OnePlus) return false for canDrawOverlays and AppOps
+            // even when the user has granted overlay permission. This is the most reliable check.
+            try {
+                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val testView = android.view.View(context)
+                testView.layoutParams = WindowManager.LayoutParams(
+                    1, 1,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    else
+                        WindowManager.LayoutParams.TYPE_PHONE,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                    PixelFormat.TRANSLUCENT
+                )
+                // Try adding and immediately removing a 1x1 overlay
+                wm.addView(testView, testView.layoutParams)
+                wm.removeView(testView)
+                Log.d(TAG, "hasOverlayPermission: check5 (test overlay) PASSED -> returning true")
+                promise.resolve(true)
+                return
+            } catch (e: Exception) {
+                Log.w(TAG, "hasOverlayPermission: check5 (test overlay) FAILED: ${e.message}")
+            }
+
             Log.d(TAG, "hasOverlayPermission: ALL CHECKS FAILED, returning false")
             promise.resolve(false)
         } catch (e: Exception) {
@@ -497,8 +523,20 @@ class CallDetectionModule(
     @ReactMethod
     fun testShowOverlay(phoneNumber: String) {
         Log.d(TAG, "[CallDetectionModule] testShowOverlay called with: $phoneNumber")
-        val hasOverlayPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
-                Settings.canDrawOverlays(reactApplicationContext)
+        val hasOverlayPermission = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            true
+        } else {
+            // Use the same comprehensive check as hasOverlayPermission but inline for speed
+            Settings.canDrawOverlays(reactApplicationContext) || try {
+                val appOps = reactApplicationContext.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+                val mode = appOps.checkOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                    android.os.Process.myUid(),
+                    reactApplicationContext.packageName
+                )
+                mode == android.app.AppOpsManager.MODE_ALLOWED || mode == android.app.AppOpsManager.MODE_DEFAULT
+            } catch (e: Exception) { false }
+        }
         Log.d(TAG, "[CallDetectionModule] has overlay permission: $hasOverlayPermission")
         if (!hasOverlayPermission) {
             Log.e(TAG, "[CallDetectionModule] NO OVERLAY PERMISSION - can't show overlay!")
@@ -615,6 +653,17 @@ class CallDetectionModule(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to hide persistent notification", e)
         }
+    }
+
+    @ReactMethod
+    fun sendLogToJS(tag: String, message: String, level: String) {
+        // Send logs from native to JS so they appear in debugLogger
+        val data = Arguments.createMap().apply {
+            putString("tag", tag)
+            putString("message", message)
+            putString("level", level)
+        }
+        sendToReactNative("nativeLog", data.toString())
     }
 
     @ReactMethod

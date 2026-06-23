@@ -419,6 +419,8 @@ class CallOverlayService : Service() {
                 setColor(Color.TRANSPARENT)
                 cornerRadius = dp(20).toFloat()
             }
+            // Make sure window itself has transparent background
+            setBackgroundColor(Color.TRANSPARENT)
         }
 
         val card = LinearLayout(this).apply {
@@ -586,27 +588,29 @@ class CallOverlayService : Service() {
             layoutParams = LinearLayout.LayoutParams(0, dp(1), 1f)
         }
         val tagsHeaderLabel = TextView(this).apply {
-            text = "  الوسوم  "
+            text = "الوسوم ("
             setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
-        val tagsDivider2 = android.view.View(this).apply {
-            setBackgroundColor(dividerColor)
-            layoutParams = LinearLayout.LayoutParams(0, dp(1), 1f)
+        val tagsCountLabel = TextView(this).apply {
+            text = "0)"
+            setTextColor(BRAND_COLOR)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            tag = "tags_count_label"
         }
         tagsSectionHeader.addView(tagsDivider)
         tagsSectionHeader.addView(tagsHeaderLabel)
-        tagsSectionHeader.addView(tagsDivider2)
+        tagsSectionHeader.addView(tagsCountLabel)
 
-        // Tags container — horizontal wrap via nested horizontal LinearLayouts
-        val tagsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        // Tags container — uses FlowLayout for horizontal wrapping
+        val tagsRow = FlowLayout(this).apply {
             tag = "tags_row"
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply { topMargin = dp(6) }
         }
         val tagsScrollView = ScrollView(this).apply {
             tag = "tags_scroll"
@@ -614,7 +618,7 @@ class CallOverlayService : Service() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(100)
-            ).apply { topMargin = dp(6) }
+            ).apply { topMargin = dp(4) }
             isNestedScrollingEnabled = true
             addView(tagsRow)
         }
@@ -970,9 +974,10 @@ class CallOverlayService : Service() {
 
             // Show tags - up to 5
             if (tags != null && tags.length() > 0) {
-                val tagsRow = card.findViewWithTag<LinearLayout>("tags_row")
+                val tagsRow = card.findViewWithTag<FlowLayout>("tags_row")
                 val tagsScroll = card.findViewWithTag<ScrollView>("tags_scroll")
                 val tagsHeader = card.findViewWithTag<LinearLayout>("tags_section_header")
+                val tagsCountLabel = card.findViewWithTag<TextView>("tags_count_label")
                 tagsRow?.removeAllViews()
                 var addedCount = 0
                 for (i in 0 until minOf(tags.length(), 5)) {
@@ -995,6 +1000,8 @@ class CallOverlayService : Service() {
                     })
                     addedCount++
                 }
+                // Update count label
+                tagsCountLabel?.text = "$addedCount)"
                 if (addedCount > 0) {
                     tagsHeader?.visibility = android.view.View.VISIBLE
                     tagsScroll?.visibility = android.view.View.VISIBLE
@@ -1047,24 +1054,42 @@ class CallOverlayService : Service() {
         // no-op: all three action buttons (details, callback, retry) are always shown
     }
 
-    // Call the phone number - converts international format to local then opens dialer
+    // Call the phone number directly using ACTION_CALL
     private fun callPhoneNumber(phoneNumber: String) {
         try {
             val cleaned = phoneNumber.replace(Regex("[^\\d+]"), "")
-            // Convert international Egyptian number (+20XXXXXXXXX) to local format (0XXXXXXXXX)
-            val dialNumber = when {
-                cleaned.startsWith("+20") && cleaned.length == 13 -> "0${cleaned.substring(3)}"
-                cleaned.startsWith("20") && cleaned.length == 12 -> "0${cleaned.substring(2)}"
-                else -> cleaned
+            
+            // Check CALL_PHONE permission
+            val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.CALL_PHONE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            
+            if (hasPermission) {
+                // Direct call
+                val callIntent = Intent(Intent.ACTION_CALL).apply {
+                    data = android.net.Uri.parse("tel:$cleaned")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(callIntent)
+                Log.d(TAG, "callPhoneNumber: CALLING $cleaned directly")
+            } else {
+                // Fallback to DIAL
+                Log.w(TAG, "callPhoneNumber: no CALL_PHONE perm, opening dialer")
+                val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+                    data = android.net.Uri.parse("tel:$cleaned")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(dialIntent)
             }
-            val dialIntent = Intent(Intent.ACTION_DIAL).apply {
-                data = android.net.Uri.parse("tel:$dialNumber")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            startActivity(dialIntent)
-            Log.d(TAG, "callPhoneNumber: dialing $dialNumber (original: $cleaned)")
         } catch (e: Exception) {
             Log.e(TAG, "callPhoneNumber failed: ${e.message}")
+            // Last resort: open dialer without number
+            try {
+                startActivity(Intent(Intent.ACTION_DIAL).apply {
+                    data = android.net.Uri.parse("tel:")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+            } catch (e2: Exception) { Log.e(TAG, "callPhoneNumber fallback failed", e2) }
         }
     }
 
@@ -1216,4 +1241,71 @@ class CallOverlayService : Service() {
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density + 0.5f).toInt()
+}
+
+// Simple FlowLayout: arranges children in horizontal rows, wraps to next row when full
+class FlowLayout(context: Context) : LinearLayout(context) {
+    private var lineSpacing = 0
+    private var itemSpacing = 0
+
+    init {
+        orientation = VERTICAL
+        lineSpacing = (6 * resources.displayMetrics.density + 0.5f).toInt()
+        itemSpacing = (4 * resources.displayMetrics.density + 0.5f).toInt()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val maxWidth = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+        var currentLineWidth = 0
+        var currentLineHeight = 0
+        var totalHeight = paddingTop + paddingBottom
+
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child.visibility == GONE) continue
+
+            measureChild(child, widthMeasureSpec, heightMeasureSpec)
+            val childWidth = child.measuredWidth
+            val childHeight = child.measuredHeight
+
+            if (currentLineWidth + childWidth > maxWidth && currentLineWidth > 0) {
+                // Wrap to next line
+                totalHeight += currentLineHeight + lineSpacing
+                currentLineWidth = 0
+                currentLineHeight = 0
+            }
+
+            currentLineWidth += childWidth + if (currentLineWidth > 0) itemSpacing else 0
+            currentLineHeight = maxOf(currentLineHeight, childHeight)
+        }
+
+        totalHeight += currentLineHeight
+        setMeasuredDimension(maxWidth + paddingLeft + paddingRight, totalHeight)
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        val maxWidth = r - l - paddingLeft - paddingRight
+        var currentX = paddingLeft
+        var currentY = paddingTop
+        var currentLineHeight = 0
+
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child.visibility == GONE) continue
+
+            val childWidth = child.measuredWidth
+            val childHeight = child.measuredHeight
+
+            if (currentX + childWidth > maxWidth && currentX > paddingLeft) {
+                // Wrap to next line
+                currentY += currentLineHeight + lineSpacing
+                currentX = paddingLeft
+                currentLineHeight = 0
+            }
+
+            child.layout(currentX, currentY, currentX + childWidth, currentY + childHeight)
+            currentX += childWidth + if (currentX > paddingLeft) itemSpacing else 0
+            currentLineHeight = maxOf(currentLineHeight, childHeight)
+        }
+    }
 }
