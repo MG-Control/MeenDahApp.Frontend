@@ -566,6 +566,45 @@ class CallDetectionModule(
     }
 
     @ReactMethod
+    fun blockNumber(phoneNumber: String) {
+        try {
+            val prefs = reactApplicationContext.getSharedPreferences(
+                MeenDahCallScreeningService.BLOCKED_NUMBERS_PREFS, Context.MODE_PRIVATE
+            )
+            val existing = prefs.getString(MeenDahCallScreeningService.BLOCKED_NUMBERS_KEY, null)
+            val arr = if (existing != null) org.json.JSONArray(existing) else org.json.JSONArray()
+            // Avoid duplicates
+            for (i in 0 until arr.length()) {
+                if (arr.getString(i) == phoneNumber) return
+            }
+            arr.put(phoneNumber)
+            prefs.edit().putString(MeenDahCallScreeningService.BLOCKED_NUMBERS_KEY, arr.toString()).apply()
+            Log.d(TAG, "blockNumber: saved $phoneNumber, total=${arr.length()}")
+        } catch (e: Exception) {
+            Log.e(TAG, "blockNumber failed: ${e.message}")
+        }
+    }
+
+    @ReactMethod
+    fun unblockNumber(phoneNumber: String) {
+        try {
+            val prefs = reactApplicationContext.getSharedPreferences(
+                MeenDahCallScreeningService.BLOCKED_NUMBERS_PREFS, Context.MODE_PRIVATE
+            )
+            val existing = prefs.getString(MeenDahCallScreeningService.BLOCKED_NUMBERS_KEY, null) ?: return
+            val arr = org.json.JSONArray(existing)
+            val newArr = org.json.JSONArray()
+            for (i in 0 until arr.length()) {
+                if (arr.getString(i) != phoneNumber) newArr.put(arr.getString(i))
+            }
+            prefs.edit().putString(MeenDahCallScreeningService.BLOCKED_NUMBERS_KEY, newArr.toString()).apply()
+            Log.d(TAG, "unblockNumber: removed $phoneNumber, total=${newArr.length()}")
+        } catch (e: Exception) {
+            Log.e(TAG, "unblockNumber failed: ${e.message}")
+        }
+    }
+
+    @ReactMethod
     fun hidePersistentNotification() {
         Log.d(TAG, "hidePersistentNotification called")
         try {

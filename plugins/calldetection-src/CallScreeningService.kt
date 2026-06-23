@@ -15,6 +15,29 @@ class MeenDahCallScreeningService : CallScreeningService() {
 
     companion object {
         private const val TAG = "MeenDah"
+        const val BLOCKED_NUMBERS_PREFS = "meendah_blocked_numbers"
+        const val BLOCKED_NUMBERS_KEY = "blocked_list"
+    }
+
+    private fun isNumberBlocked(incomingNumber: String): Boolean {
+        return try {
+            val prefs = getSharedPreferences(BLOCKED_NUMBERS_PREFS, MODE_PRIVATE)
+            val blockedJson = prefs.getString(BLOCKED_NUMBERS_KEY, null) ?: return false
+            val arr = org.json.JSONArray(blockedJson)
+            val normalizedIncoming = incomingNumber.replace(Regex("[^\\d+]"), "")
+            for (i in 0 until arr.length()) {
+                val blocked = arr.getString(i).replace(Regex("[^\\d+]"), "")
+                if (blocked == normalizedIncoming) return true
+                // Also match Egyptian numbers: +2010X == 010X
+                val blockedLocal = if (blocked.startsWith("+20")) "0${blocked.substring(3)}" else blocked
+                val incomingLocal = if (normalizedIncoming.startsWith("+20")) "0${normalizedIncoming.substring(3)}" else normalizedIncoming
+                if (blockedLocal == incomingLocal) return true
+            }
+            false
+        } catch (e: Exception) {
+            Log.w(TAG, "isNumberBlocked check failed: ${e.message}")
+            false
+        }
     }
 
     override fun onScreenCall(details: Call.Details) {
@@ -65,6 +88,21 @@ class MeenDahCallScreeningService : CallScreeningService() {
 
         phoneNumber = phoneNumber.trim()
         Log.d(TAG, "[CallScreening] Final phoneNumber: $phoneNumber")
+
+        // Check if number is blocked
+        if (phoneNumber.isNotEmpty() && isNumberBlocked(phoneNumber)) {
+            Log.d(TAG, "[CallScreening] Number $phoneNumber is blocked — rejecting call")
+            respondToCall(
+                details,
+                CallResponse.Builder()
+                    .setDisallowCall(true)
+                    .setRejectCall(true)
+                    .setSkipCallLog(false)
+                    .setSkipNotification(true)
+                    .build()
+            )
+            return
+        }
 
         // Read auth token and base URL from SharedPreferences to pass to overlay service
         val prefs = getSharedPreferences(CallOverlayService.PREFS_NAME, MODE_PRIVATE)

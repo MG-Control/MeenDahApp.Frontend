@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { Platform } from 'react-native';
 import { appStorage } from './appStorage';
+import { callDetection } from '@/lib/native/callDetection';
 
 interface BlockedNumber {
   phoneNumber: string;
@@ -38,6 +40,11 @@ export const useBlockedNumbersStore = create<BlockedNumbersState>()(
             }
           ]
         });
+
+        // Sync to native layer so CallScreeningService can block the call
+        if (Platform.OS === 'android') {
+          callDetection.blockNumber(phoneNumber);
+        }
       },
       
       unblockNumber: (phoneNumber) => {
@@ -45,6 +52,11 @@ export const useBlockedNumbersStore = create<BlockedNumbersState>()(
         set({
           blockedNumbers: blockedNumbers.filter(b => b.phoneNumber !== phoneNumber)
         });
+
+        // Sync removal to native layer
+        if (Platform.OS === 'android') {
+          callDetection.unblockNumber(phoneNumber);
+        }
       },
       
       isBlocked: (phoneNumber) => {

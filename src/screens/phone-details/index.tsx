@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -95,13 +95,13 @@ export default function PhoneDetailScreen() {
     isRefetching,
   } = usePhoneLookup(phoneNumber, { skipInitialFetch: shouldSkipInitialLookup });
   const { addTagAsync, isAddingTag } = useTags(phoneNumber || '');
-  const { blockNumber, unblockNumber, isBlocked } = useBlockedNumbersStore();
+  const { blockNumber, unblockNumber, isBlocked, _hasHydrated: storeHydrated } = useBlockedNumbersStore();
 
   const [localPhone, setLocalPhone] = useState<PhoneDetails | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [tagInput, setTagInput] = useState('');
   
-  const isNumberBlocked = phoneNumber ? isBlocked(phoneNumber) : false;
+  const isNumberBlocked = storeHydrated && phoneNumber ? isBlocked(phoneNumber) : false;
 
   useEffect(() => {
     if (phone) {
@@ -122,7 +122,16 @@ export default function PhoneDetailScreen() {
     return filteredTags.filter((tag) => !tagAlreadyExists(displayData.tags, tag.id));
   }, [displayData?.tags, tagInput]);
 
+  const navigation = useNavigation();
   const backIcon = I18nManager.isRTL ? 'arrow-forward' : 'arrow-back';
+
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
 
   const handleShare = async () => {
     if (!phoneNumber) return;
@@ -342,7 +351,7 @@ export default function PhoneDetailScreen() {
       <ThemedView style={styles.container}>
         <View style={styles.errorContainer}>
           <ThemedText themeColor="textSecondary">{t('phone.loadError')}</ThemedText>
-          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.retryButton} onPress={handleBack}>
             <ThemedText style={styles.retryButtonText}>{t('common.cancel')}</ThemedText>
           </TouchableOpacity>
         </View>
@@ -384,7 +393,7 @@ export default function PhoneDetailScreen() {
         <View style={[styles.header, { backgroundColor: BRAND_COLOR }]}>
           <SafeAreaView edges={['top']} style={styles.safeHeader}>
             <View style={styles.topBar}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+              <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
                 <Ionicons name={backIcon} size={24} color="white" />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleShare} style={styles.iconButton}>

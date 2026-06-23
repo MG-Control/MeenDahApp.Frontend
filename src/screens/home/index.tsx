@@ -53,20 +53,11 @@ export default function HomeScreen() {
   const handleRequestOverlay = async () => {
     if (__DEV__) console.log('[HomeScreen] handleRequestOverlay called');
     try {
-      // Try the native overlay settings first
       await requestOverlayPermission();
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       if (__DEV__) console.error('[HomeScreen] handleRequestOverlay error:', errMsg);
       Alert.alert(t('home.overlayPermErrorTitle'), t('home.overlayPermErrorMessage', { error: errMsg }));
-    }
-    // Always also open app settings as fallback (like notifications permission does)
-    try {
-      await openAppSettings();
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      if (__DEV__) console.error('[HomeScreen] openAppSettings error:', errMsg);
-      Alert.alert(t('home.appSettingsErrorTitle'), t('home.appSettingsErrorMessage', { error: errMsg }));
     }
   };
 
