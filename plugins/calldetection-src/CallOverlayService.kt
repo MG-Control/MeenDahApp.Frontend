@@ -367,23 +367,21 @@ class CallOverlayService : Service() {
         
         // 1. Update phone label
         card.findViewWithTag<TextView>("phone_label")?.text = formatPhoneNumber(phoneNumber)
-        
-        // 2. Update details button action
-        card.findViewWithTag<android.view.View>("details_button")?.setOnClickListener { openInApp(phoneNumber) }
 
-        // 3. Check contacts immediately
+        // 2. Check contacts immediately
         val contactName = getContactName(phoneNumber)
         card.findViewWithTag<TextView>("contact_info_label")?.apply {
             text = if (contactName != null) "👤 Saved as: $contactName" else "🔍 Not in contacts"
             visibility = android.view.View.VISIBLE
         }
 
-        // 4. Reset database info and show loading
+        // 3. Reset database info and show loading
         updateNameLabel("Searching MeenDah...")
         card.findViewWithTag<TextView>("also_known_as_label")?.visibility = android.view.View.GONE
-        card.findViewWithTag<LinearLayout>("tags_row")?.visibility = android.view.View.GONE
+        card.findViewWithTag<LinearLayout>("tags_section_header")?.visibility = android.view.View.GONE
+        card.findViewWithTag<ScrollView>("tags_scroll")?.visibility = android.view.View.GONE
         
-        // 5. Update country
+        // 4. Update country
         card.findViewWithTag<TextView>("country_label")?.let {
             val countryText = detectCountry(phoneNumber)
             it.text = countryText
@@ -391,7 +389,6 @@ class CallOverlayService : Service() {
         }
         
         showAvatarLoading(true)
-        showActionButtons(false)
         fetchPhoneDetails(phoneNumber)
     }
 
@@ -418,7 +415,6 @@ class CallOverlayService : Service() {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(6), dp(12), dp(6))
-            // Set the same background color as the card to fix gray edges behind rounded corners
             background = GradientDrawable().apply {
                 setColor(Color.TRANSPARENT)
                 cornerRadius = dp(20).toFloat()
@@ -427,7 +423,7 @@ class CallOverlayService : Service() {
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(18), dp(20), dp(18))
+            setPadding(dp(16), dp(14), dp(16), dp(16))
             elevation = 12f * resources.displayMetrics.density
             background = GradientDrawable().apply {
                 setColor(bgColor)
@@ -435,12 +431,11 @@ class CallOverlayService : Service() {
             }
         }
 
-        // ── Header row: brand + dismiss ──
+        // ── Header: brand + dismiss ──
         val headerRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-
         val brandLabel = TextView(this).apply {
             text = "Meendah"
             setTextColor(BRAND_COLOR)
@@ -448,7 +443,6 @@ class CallOverlayService : Service() {
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
-
         val dismissBtn = TextView(this).apply {
             text = "✕"
             setTextColor(textSecondary)
@@ -459,100 +453,73 @@ class CallOverlayService : Service() {
         headerRow.addView(brandLabel)
         headerRow.addView(dismissBtn)
 
-        val divider = android.view.View(this).apply {
+        val dividerTop = android.view.View(this).apply {
             setBackgroundColor(dividerColor)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
             ).apply { topMargin = dp(10); bottomMargin = dp(12) }
         }
 
-        // ── Phone avatar / icon ──
+        // ── Avatar + info row ──
         val avatarContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = dp(12) }
+            )
         }
-
-        // Circular avatar with phone icon
         val avatarCircle = createAvatarCircle()
         avatarContainer.addView(avatarCircle)
 
-        // Phone number and name column
         val infoColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
-                0,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                1f
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             ).apply { marginStart = dp(14) }
         }
-
         val phoneLabel = TextView(this).apply {
             text = if (phoneNumber.isNotEmpty()) formatPhoneNumber(phoneNumber) else ""
             setTextColor(textSecondary)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             tag = "phone_label"
         }
-
         val nameLabel = TextView(this).apply {
-            text = if (phoneNumber.isEmpty()) {
-                "Identifying caller..."
-            } else {
-                "Searching..."
-            }
+            text = if (phoneNumber.isEmpty()) "Identifying caller..." else "Searching..."
             setTextColor(textPrimary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             tag = "name_label"
         }
-
         val contactInfoLabel = TextView(this).apply {
             tag = "contact_info_label"
             setTextColor(textSecondary)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             visibility = android.view.View.GONE
         }
-
         val alsoKnownAsLabel = TextView(this).apply {
             tag = "also_known_as_label"
             setTextColor(BRAND_COLOR)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             visibility = android.view.View.GONE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(2) }
         }
-
-        infoColumn.addView(phoneLabel)
-        infoColumn.addView(nameLabel)
-        infoColumn.addView(contactInfoLabel)
-        infoColumn.addView(alsoKnownAsLabel)
-
-        // Country / operator hint
         val countryLabel = TextView(this).apply {
             tag = "country_label"
             text = if (phoneNumber.isNotEmpty()) detectCountry(phoneNumber) else ""
             setTextColor(textSecondary)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            visibility = if (phoneNumber.isNotEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            visibility = if (phoneNumber.isNotEmpty() && detectCountry(phoneNumber).isNotEmpty())
+                android.view.View.VISIBLE else android.view.View.GONE
         }
+        infoColumn.addView(phoneLabel)
+        infoColumn.addView(nameLabel)
+        infoColumn.addView(contactInfoLabel)
+        infoColumn.addView(alsoKnownAsLabel)
         infoColumn.addView(countryLabel)
-
-        val detailsButton = createActionButton("تفاصيل أكثر", BRAND_COLOR) {
-            openInApp(phoneNumber)
-        }.apply {
-            tag = "details_button"
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(8) }
-        }
-        infoColumn.addView(detailsButton)
-
         avatarContainer.addView(infoColumn)
 
         // ── Spam badge ──
@@ -560,58 +527,102 @@ class CallOverlayService : Service() {
             tag = "spam_badge"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setPadding(dp(12), dp(4), dp(12), dp(4))
+            setPadding(dp(10), dp(4), dp(10), dp(4))
             visibility = android.view.View.GONE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(4) }
+            ).apply { topMargin = dp(8) }
         }
 
-        // ── Retry / Callback buttons row (hidden by default) ──
+        // ── Divider before actions ──
+        val dividerActions = android.view.View(this).apply {
+            tag = "divider_actions"
+            setBackgroundColor(dividerColor)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
+            ).apply { topMargin = dp(12); bottomMargin = dp(10) }
+        }
+
+        // ── Action buttons row — always visible ──
         val actionButtonsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             tag = "action_buttons_row"
-            visibility = android.view.View.GONE
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(8) }
+            )
         }
+        val detailsButton = createActionButton("تفاصيل أكثر", BRAND_COLOR) {
+            openInApp(currentPhoneNumber)
+        }.apply { tag = "details_button" }
 
-        // Call back button
-        val callBackButton = createActionButton("Callback", Color.parseColor("#34C759")) {
+        val callBackButton = createActionButton("رد الاتصال", Color.parseColor("#34C759")) {
             callPhoneNumber(currentPhoneNumber)
-        }.apply {
-            tag = "callback_button"
-        }
+        }.apply { tag = "callback_button" }
 
-        // Retry fetch button
-        val retryButton = createActionButton("Retry", Color.parseColor("#FF9500")) {
+        val retryButton = createActionButton("إعادة البحث", Color.parseColor("#FF9500")) {
             retryFetchPhoneDetails(currentPhoneNumber)
-        }.apply {
-            tag = "retry_button"
-        }
+        }.apply { tag = "retry_button" }
 
+        actionButtonsRow.addView(detailsButton)
         actionButtonsRow.addView(callBackButton)
         actionButtonsRow.addView(retryButton)
 
-        // ── Tags row (wrap content inside a horizontal scroll if needed) ──
-        val tagsRow = LinearLayout(this).apply {
+        // ── Tags section header + scrollable tags ──
+        val tagsSectionHeader = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            tag = "tags_row"
+            gravity = Gravity.CENTER_VERTICAL
+            tag = "tags_section_header"
             visibility = android.view.View.GONE
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(8) }
+            ).apply { topMargin = dp(12) }
+        }
+        val tagsDivider = android.view.View(this).apply {
+            setBackgroundColor(dividerColor)
+            layoutParams = LinearLayout.LayoutParams(0, dp(1), 1f)
+        }
+        val tagsHeaderLabel = TextView(this).apply {
+            text = "  الوسوم  "
+            setTextColor(textSecondary)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val tagsDivider2 = android.view.View(this).apply {
+            setBackgroundColor(dividerColor)
+            layoutParams = LinearLayout.LayoutParams(0, dp(1), 1f)
+        }
+        tagsSectionHeader.addView(tagsDivider)
+        tagsSectionHeader.addView(tagsHeaderLabel)
+        tagsSectionHeader.addView(tagsDivider2)
+
+        // Tags container — horizontal wrap via nested horizontal LinearLayouts
+        val tagsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            tag = "tags_row"
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        val tagsScrollView = ScrollView(this).apply {
+            tag = "tags_scroll"
+            visibility = android.view.View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(100)
+            ).apply { topMargin = dp(6) }
+            isNestedScrollingEnabled = true
+            addView(tagsRow)
         }
 
-        // ── Debug token label (hidden by default) ──
+        // ── Debug token label ──
         val tokenDebugLabel = TextView(this).apply {
             tag = "token_debug_label"
-            setTextColor(Color.parseColor("#FF3B30")) // Red color for visibility
+            setTextColor(Color.parseColor("#FF3B30"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
             visibility = android.view.View.GONE
             layoutParams = LinearLayout.LayoutParams(
@@ -621,26 +632,27 @@ class CallOverlayService : Service() {
             gravity = Gravity.CENTER
         }
 
-        // ── Version Label ──
+        // ── Version label ──
         val versionLabel = TextView(this).apply {
-            val version = getVersionLabel()
-            text = "v$version"
+            text = "v${getVersionLabel()}"
             setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(12) }
+            ).apply { topMargin = dp(10) }
             gravity = Gravity.CENTER
         }
 
         // ── Assemble card ──
         card.addView(headerRow)
-        card.addView(divider)
+        card.addView(dividerTop)
         card.addView(avatarContainer)
         card.addView(spamBadge)
+        card.addView(dividerActions)
         card.addView(actionButtonsRow)
-        card.addView(tagsRow)
+        card.addView(tagsSectionHeader)
+        card.addView(tagsScrollView)
         card.addView(tokenDebugLabel)
         card.addView(versionLabel)
 
@@ -959,16 +971,18 @@ class CallOverlayService : Service() {
             // Show tags - up to 5
             if (tags != null && tags.length() > 0) {
                 val tagsRow = card.findViewWithTag<LinearLayout>("tags_row")
+                val tagsScroll = card.findViewWithTag<ScrollView>("tags_scroll")
+                val tagsHeader = card.findViewWithTag<LinearLayout>("tags_section_header")
                 tagsRow?.removeAllViews()
-                tagsRow?.visibility = android.view.View.VISIBLE
+                var addedCount = 0
                 for (i in 0 until minOf(tags.length(), 5)) {
-                    val t = tags.getJSONObject(i).optString("text", "")
+                    val t = tags.getJSONObject(i).optString("text", "").trim()
                     if (t.isEmpty()) continue
                     tagsRow?.addView(TextView(this).apply {
                         text = t
                         setTextColor(BRAND_COLOR)
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-                        setPadding(dp(8), dp(3), dp(8), dp(3))
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                        setPadding(dp(10), dp(5), dp(10), dp(5))
                         background = GradientDrawable().apply {
                             setColor(Color.TRANSPARENT)
                             setStroke(dp(1), BRAND_COLOR)
@@ -977,8 +991,13 @@ class CallOverlayService : Service() {
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply { marginEnd = dp(6) }
+                        ).apply { bottomMargin = dp(5) }
                     })
+                    addedCount++
+                }
+                if (addedCount > 0) {
+                    tagsHeader?.visibility = android.view.View.VISIBLE
+                    tagsScroll?.visibility = android.view.View.VISIBLE
                 }
             }
         } catch (e: Exception) {
@@ -1008,7 +1027,8 @@ class CallOverlayService : Service() {
             visibility = android.view.View.VISIBLE
         }
 
-        card.findViewWithTag<LinearLayout>("tags_row")?.visibility = android.view.View.GONE
+        card.findViewWithTag<LinearLayout>("tags_section_header")?.visibility = android.view.View.GONE
+        card.findViewWithTag<ScrollView>("tags_scroll")?.visibility = android.view.View.GONE
         showActionButtons(true)
         showAvatarLoading(false)
     }
@@ -1022,23 +1042,27 @@ class CallOverlayService : Service() {
         }
     }
 
-    // Show action buttons (callback + retry)
-    private fun showActionButtons(show: Boolean) {
-        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout ?: return
-        card.findViewWithTag<LinearLayout>("action_buttons_row")?.visibility =
-            if (show) android.view.View.VISIBLE else android.view.View.GONE
+    // action_buttons_row is always visible — this is kept only for legacy call sites
+    private fun showActionButtons(@Suppress("UNUSED_PARAMETER") show: Boolean) {
+        // no-op: all three action buttons (details, callback, retry) are always shown
     }
 
-    // Call the phone number using ACTION_DIAL
+    // Call the phone number - converts international format to local then opens dialer
     private fun callPhoneNumber(phoneNumber: String) {
         try {
             val cleaned = phoneNumber.replace(Regex("[^\\d+]"), "")
+            // Convert international Egyptian number (+20XXXXXXXXX) to local format (0XXXXXXXXX)
+            val dialNumber = when {
+                cleaned.startsWith("+20") && cleaned.length == 13 -> "0${cleaned.substring(3)}"
+                cleaned.startsWith("20") && cleaned.length == 12 -> "0${cleaned.substring(2)}"
+                else -> cleaned
+            }
             val dialIntent = Intent(Intent.ACTION_DIAL).apply {
-                data = android.net.Uri.parse("tel:$cleaned")
+                data = android.net.Uri.parse("tel:$dialNumber")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(dialIntent)
-            Log.d(TAG, "callPhoneNumber: opened dialer for $cleaned")
+            Log.d(TAG, "callPhoneNumber: dialing $dialNumber (original: $cleaned)")
         } catch (e: Exception) {
             Log.e(TAG, "callPhoneNumber failed: ${e.message}")
         }

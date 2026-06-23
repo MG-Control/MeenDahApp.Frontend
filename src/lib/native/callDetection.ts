@@ -155,4 +155,16 @@ export const callDetection = {
       CallDetectionModule.openOverlayMethodAppDetailsDeepLink();
     }
   },
+
+  blockNumber(phoneNumber: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.blockNumber(phoneNumber);
+    }
+  },
+
+  unblockNumber(phoneNumber: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.unblockNumber(phoneNumber);
+    }
+  },
 };
