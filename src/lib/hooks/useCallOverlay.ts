@@ -5,6 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import Constants from 'expo-constants';
 import { callDetection } from '@/lib/native/callDetection';
 import { useAuthStore } from '@/lib/stores/authStore';
+import { debugLogger } from '@/lib/utils/debugLogger';
 
 const BASE_URL = (
   __DEV__
@@ -44,7 +45,7 @@ export function useCallOverlay() {
   // Check all permissions status
   const checkPermissionsStatus = async () => {
     if (Platform.OS !== 'android') return;
-    if (__DEV__) console.log('[CallOverlay] checkPermissionsStatus() called');
+    debugLogger.log('CallOverlay', 'checkPermissionsStatus() called');
 
     // Check Android runtime permissions
     const hasPostNotifications = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
@@ -57,16 +58,15 @@ export function useCallOverlay() {
     const hasOverlayPermission = await callDetection.hasOverlayPermission();
     const isIgnoringBattery = await callDetection.isIgnoringBatteryOptimizations();
 
-    if (__DEV__) {
-      console.log('[CallOverlay] checkPermissionsStatus() results:');
-      console.log('  hasPostNotifications:', hasPostNotifications);
-      console.log('  hasReadPhoneState:', hasReadPhoneState);
-      console.log('  hasReadCallLog:', hasReadCallLog);
-      console.log('  hasReadPhoneNumbers:', hasReadPhoneNumbers);
-      console.log('  hasOverlayPermission:', hasOverlayPermission);
-      console.log('  isDefaultCallerId:', isDefaultCallerId);
-      console.log('  isIgnoringBattery:', isIgnoringBattery);
-    }
+    debugLogger.log('CallOverlay', 'checkPermissionsStatus() results', {
+      hasPostNotifications,
+      hasReadPhoneState,
+      hasReadCallLog,
+      hasReadPhoneNumbers,
+      hasOverlayPermission,
+      isDefaultCallerId,
+      isIgnoringBattery,
+    });
 
     // Check contacts permission
     const hasReadContacts = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_CONTACTS);
@@ -188,7 +188,7 @@ export function useCallOverlay() {
     if (Platform.OS !== 'android') return;
     if (!_hasHydrated || !accessToken) return;
 
-    if (__DEV__) console.log('[CallOverlay] Triggering permission request...');
+    debugLogger.log('CallOverlay', 'Triggering permission request...');
     
     // Always try to ensure permissions when the app is open and user is logged in!
     ensurePermissions({
@@ -259,10 +259,10 @@ interface Strings {
 
 async function ensurePermissions(s: Strings) {
   try {
-    if (__DEV__) console.log('[CallOverlay] Starting permission request flow...');
+    debugLogger.log('CallOverlay', 'Starting permission request flow...');
 
     // 0. POST_NOTIFICATIONS — required for notifications on Android 13+
-    if (__DEV__) console.log('[CallOverlay] Requesting POST_NOTIFICATIONS...');
+    debugLogger.log('CallOverlay', 'Requesting POST_NOTIFICATIONS...');
     await requestIfNeeded(
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       { title: 'Allow notifications', message: 'Allow Meendah to show setup notifications',
@@ -270,7 +270,7 @@ async function ensurePermissions(s: Strings) {
     );
 
     // 0.5. READ_CONTACTS — required to show contact names in overlay
-    if (__DEV__) console.log('[CallOverlay] Requesting READ_CONTACTS...');
+    debugLogger.log('CallOverlay', 'Requesting READ_CONTACTS...');
     await requestIfNeeded(
       PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
       { title: 'Allow Contacts', message: 'Allow Meendah to access your contacts to identify saved callers.',
@@ -278,16 +278,16 @@ async function ensurePermissions(s: Strings) {
     );
 
     // 1. READ_PHONE_STATE — required on all Android versions
-    if (__DEV__) console.log('[CallOverlay] Requesting READ_PHONE_STATE...');
+    debugLogger.log('CallOverlay', 'Requesting READ_PHONE_STATE...');
     const phoneStateGranted = await requestIfNeeded(
       PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
       { title: s.phoneStateTitle, message: s.phoneStateMessage,
         buttonPositive: s.allow, buttonNegative: s.notNow }
     );
-    if (__DEV__) console.log('[CallOverlay] READ_PHONE_STATE granted:', phoneStateGranted);
+    debugLogger.log('CallOverlay', 'READ_PHONE_STATE granted', phoneStateGranted);
     
     // 2. READ_CALL_LOG — needed on Android 9+ to get the incoming number
-    if (__DEV__) console.log('[CallOverlay] Requesting READ_CALL_LOG...');
+    debugLogger.log('CallOverlay', 'Requesting READ_CALL_LOG...');
     await requestIfNeeded(
       PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
       { title: s.callLogTitle, message: s.callLogMessage,
@@ -295,7 +295,7 @@ async function ensurePermissions(s: Strings) {
     );
 
     // 3. READ_PHONE_NUMBERS — needed on some devices
-    if (__DEV__) console.log('[CallOverlay] Requesting READ_PHONE_NUMBERS...');
+    debugLogger.log('CallOverlay', 'Requesting READ_PHONE_NUMBERS...');
     await requestIfNeeded(
       PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS,
       { title: s.phoneStateTitle, message: 'Allow access to phone numbers to identify callers.',
@@ -304,23 +304,23 @@ async function ensurePermissions(s: Strings) {
 
     // 4. SYSTEM_ALERT_WINDOW (overlay) — must be granted via Settings on Android 6+
     const hasOverlay = await callDetection.hasOverlayPermission();
-    if (__DEV__) console.log('[CallOverlay] Has overlay permission:', hasOverlay);
+    debugLogger.log('CallOverlay', 'Has overlay permission', hasOverlay);
 
     // 5. طلب تعيين الـ app كـ default caller ID / screening app (Android 10+)
     // ده الأهم — بدونه CallScreeningService مش بيشتغل خالص
-    if (__DEV__) console.log('[CallOverlay] Requesting default caller ID app...');
+    debugLogger.log('CallOverlay', 'Requesting default caller ID app...');
     await requestDefaultCallerIdApp();
 
     // 6. Battery Optimizations — لمنع قتل الخدمة في الخلفية
     const isIgnoringBattery = await callDetection.isIgnoringBatteryOptimizations();
     if (!isIgnoringBattery) {
-      if (__DEV__) console.log('[CallOverlay] Requesting battery optimization ignore...');
+      debugLogger.log('CallOverlay', 'Requesting battery optimization ignore...');
       callDetection.requestIgnoreBatteryOptimizations();
     }
 
-    if (__DEV__) console.log('[CallOverlay] Permission request flow complete!');
+    debugLogger.log('CallOverlay', 'Permission request flow complete!');
   } catch (e) {
-    if (__DEV__) console.warn('[CallOverlay] Permission check failed:', e);
+    debugLogger.warn('CallOverlay', 'Permission check failed', e);
   }
 }
 
@@ -333,7 +333,7 @@ async function requestDefaultCallerIdApp() {
   try {
     await callDetection.requestDefaultCallerIdApp();
   } catch (e) {
-    if (__DEV__) console.warn('[CallOverlay] requestDefaultCallerIdApp failed:', e);
+    debugLogger.warn('CallOverlay', 'requestDefaultCallerIdApp failed', e);
   }
 }
 
@@ -341,11 +341,11 @@ async function requestIfNeeded(
   permission: (typeof PermissionsAndroid.PERMISSIONS)[keyof typeof PermissionsAndroid.PERMISSIONS],
   rationale: { title: string; message: string; buttonPositive: string; buttonNegative: string }
 ): Promise<boolean> {
-  if (__DEV__) console.log('[CallOverlay] requestIfNeeded() for permission:', permission);
+  debugLogger.log('CallOverlay', 'requestIfNeeded() for permission', permission);
   const already = await PermissionsAndroid.check(permission);
-  if (__DEV__) console.log('[CallOverlay] requestIfNeeded() already granted:', already);
+  debugLogger.log('CallOverlay', 'requestIfNeeded() already granted', already);
   if (already) return true;
   const result = await PermissionsAndroid.request(permission, rationale);
-  if (__DEV__) console.log('[CallOverlay] requestIfNeeded() result:', result);
+  debugLogger.log('CallOverlay', 'requestIfNeeded() result', result);
   return result === PermissionsAndroid.RESULTS.GRANTED;
 }

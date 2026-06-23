@@ -167,4 +167,10 @@ export const callDetection = {
       CallDetectionModule.unblockNumber(phoneNumber);
     }
   },
+
+  sendLogToJS(tag: string, message: string, level: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.sendLogToJS(tag, message, level);
+    }
+  },
 };
