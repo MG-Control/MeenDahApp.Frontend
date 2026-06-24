@@ -415,11 +415,6 @@ class CallOverlayService : Service() {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(6), dp(12), dp(6))
-            background = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
-                cornerRadius = dp(20).toFloat()
-            }
-            // Make sure window itself has transparent background
             setBackgroundColor(Color.TRANSPARENT)
         }
 
@@ -587,21 +582,18 @@ class CallOverlayService : Service() {
             setBackgroundColor(dividerColor)
             layoutParams = LinearLayout.LayoutParams(0, dp(1), 1f)
         }
-        val tagsHeaderLabel = TextView(this).apply {
-            text = "الوسوم ("
+        val tagsCountLabel = TextView(this).apply {
+            text = "الوسوم (0)"
             setTextColor(textSecondary)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
-        val tagsCountLabel = TextView(this).apply {
-            text = "0)"
-            setTextColor(BRAND_COLOR)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             tag = "tags_count_label"
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginStart = dp(6) }
         }
         tagsSectionHeader.addView(tagsDivider)
-        tagsSectionHeader.addView(tagsHeaderLabel)
         tagsSectionHeader.addView(tagsCountLabel)
 
         // Tags container — uses FlowLayout for horizontal wrapping
@@ -1001,7 +993,7 @@ class CallOverlayService : Service() {
                     addedCount++
                 }
                 // Update count label
-                tagsCountLabel?.text = "$addedCount)"
+                tagsCountLabel?.text = "الوسوم ($addedCount)"
                 if (addedCount > 0) {
                     tagsHeader?.visibility = android.view.View.VISIBLE
                     tagsScroll?.visibility = android.view.View.VISIBLE

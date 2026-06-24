@@ -66,7 +66,7 @@ export default function HomeScreen() {
   const handleRequestOverlay = async () => {
     debugLogger.log('HomeScreen', 'handleRequestOverlay called');
     
-    // Try multiple methods in sequence, stop at first success
+    // Try the direct overlay settings first, fall back to app settings only if all fail
     const methods = [
       { name: 'Settings (package)', fn: () => callDetection.openOverlayMethodSettingsAction() },
       { name: 'All apps draw over', fn: () => callDetection.openOverlayMethodAllAppsDrawOver() },
@@ -80,16 +80,17 @@ export default function HomeScreen() {
       try {
         debugLogger.log('HomeScreen', `Trying overlay method: ${method.name}`);
         await method.fn();
-        // If we got here without exception, method probably worked
-        break;
+        // If we got here without exception, method probably worked — stop here
+        debugLogger.log('HomeScreen', `Overlay method succeeded: ${method.name}`);
+        return;
       } catch (e) {
         debugLogger.warn('HomeScreen', `Method ${method.name} failed`, e);
       }
     }
     
-    // Always also open app settings as fallback
+    // Only reach here if ALL overlay-specific methods failed — open app settings as last resort
     try {
-      debugLogger.log('HomeScreen', 'Finally opening app settings');
+      debugLogger.log('HomeScreen', 'All overlay methods failed, opening app settings as fallback');
       await openAppSettings();
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
