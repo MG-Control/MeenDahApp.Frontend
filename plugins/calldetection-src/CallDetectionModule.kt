@@ -217,28 +217,46 @@ class CallDetectionModule(
                 Log.w(TAG, "hasOverlayPermission: check4 failed: ${e.message}")
             }
 
-            // Check 5: Try to actually add a 1x1 pixel overlay to test if it works
-            // Some OEMs (Xiaomi, Huawei, OnePlus) return false for canDrawOverlays and AppOps
-            // even when the user has granted overlay permission. This is the most reliable check.
+            // Check 5: Try to actually add a 1x1 pixel overlay to test if it works.
+            // Must run on the main thread and use the activity window token when available.
+            // Some OEMs (Samsung, Xiaomi, Huawei) return false for canDrawOverlays and AppOps
+            // even when the user has granted overlay permission.
             try {
-                val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                val testView = android.view.View(context)
-                testView.layoutParams = WindowManager.LayoutParams(
+                val activity = context.currentActivity
+                val ctx: Context = activity ?: context
+                val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val testView = android.view.View(ctx)
+                val lp = WindowManager.LayoutParams(
                     1, 1,
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                     else
-                        WindowManager.LayoutParams.TYPE_PHONE,
+                        @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                     PixelFormat.TRANSLUCENT
                 )
-                // Try adding and immediately removing a 1x1 overlay
-                wm.addView(testView, testView.layoutParams)
-                wm.removeView(testView)
-                Log.d(TAG, "hasOverlayPermission: check5 (test overlay) PASSED -> returning true")
-                promise.resolve(true)
-                return
+                // addView/removeView must happen on the main thread
+                val latch = java.util.concurrent.CountDownLatch(1)
+                var check5Result = false
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    try {
+                        wm.addView(testView, lp)
+                        wm.removeView(testView)
+                        check5Result = true
+                    } catch (e: Exception) {
+                        Log.w(TAG, "hasOverlayPermission: check5 addView FAILED: ${e.message}")
+                    } finally {
+                        latch.countDown()
+                    }
+                }
+                latch.await(500, java.util.concurrent.TimeUnit.MILLISECONDS)
+                if (check5Result) {
+                    Log.d(TAG, "hasOverlayPermission: check5 (test overlay) PASSED -> returning true")
+                    promise.resolve(true)
+                    return
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "hasOverlayPermission: check5 (test overlay) FAILED: ${e.message}")
             }
@@ -654,6 +672,33 @@ class CallDetectionModule(
             reactApplicationContext.startService(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to hide persistent notification", e)
+        }
+    }
+
+    @ReactMethod
+    fun callNumber(phoneNumber: String) {
+        Log.d(TAG, "callNumber called: $phoneNumber")
+        try {
+            val cleaned = phoneNumber.replace(Regex("[^\\d+]"), "")
+            val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                reactApplicationContext, android.Manifest.permission.CALL_PHONE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            val intent = if (hasPermission) {
+                Intent(Intent.ACTION_CALL).apply {
+                    data = Uri.parse("tel:$cleaned")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            } else {
+                Log.w(TAG, "callNumber: no CALL_PHONE permission, falling back to ACTION_DIAL")
+                Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:$cleaned")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            reactApplicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "callNumber failed: ${e.message}", e)
         }
     }
 

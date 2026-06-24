@@ -156,6 +156,12 @@ export const callDetection = {
     }
   },
 
+  callNumber(phoneNumber: string) {
+    if (isAndroid && CallDetectionModule) {
+      CallDetectionModule.callNumber(phoneNumber);
+    }
+  },
+
   blockNumber(phoneNumber: string) {
     if (isAndroid && CallDetectionModule) {
       CallDetectionModule.blockNumber(phoneNumber);

@@ -9,6 +9,7 @@ import {
   I18nManager,
   Linking,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Share,
@@ -31,6 +32,7 @@ import { useBlockedNumbersStore } from '@/lib/stores/blockedNumbersStore';
 import { formatRelativeTime } from '@/lib/utils/formatRelativeTime';
 import { decodePhoneFromRoute } from '@/lib/utils/phoneRoute';
 import { getSpamDetails, getSpamDetailsAr } from '@/lib/utils/spamScore';
+import { callDetection } from '@/lib/native/callDetection';
 import { styles } from './styles';
 
 const BRAND_COLOR = '#3c87f7';
@@ -159,6 +161,10 @@ export default function PhoneDetailScreen() {
 
   const handleCall = async () => {
     if (!phoneNumber) return;
+    if (Platform.OS === 'android') {
+      callDetection.callNumber(phoneNumber);
+      return;
+    }
     const url = `tel:${phoneNumber}`;
     try {
       const supported = await Linking.canOpenURL(url);
