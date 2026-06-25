@@ -142,131 +142,81 @@ class CallDetectionModule(
 
     @ReactMethod
     fun hasOverlayPermission(promise: Promise) {
-        try {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                Log.d(TAG, "hasOverlayPermission: SDK < M, returning true")
-                promise.resolve(true)
-                return
-            }
-
-            val context = reactApplicationContext
-            
-            // Check 1: Standard Settings.canDrawOverlays check
-            val check1 = try {
-                Settings.canDrawOverlays(context)
-            } catch (e: Exception) {
-                Log.w(TAG, "hasOverlayPermission: check1 failed: ${e.message}")
-                false
-            }
-            if (check1) {
-                Log.d(TAG, "hasOverlayPermission: check1 PASSED -> returning true")
-                promise.resolve(true)
-                return
-            }
-            
-            // Check 2: Check via current activity if available
-            val check2 = try {
-                val activity = context.currentActivity
-                if (activity != null) {
-                    val canDraw = Settings.canDrawOverlays(activity)
-                    if (canDraw) {
-                        Log.d(TAG, "hasOverlayPermission: check2 PASSED (via activity) -> returning true")
-                        promise.resolve(true)
-                        return
-                    }
-                }
-                false
-            } catch (e: Exception) {
-                Log.w(TAG, "hasOverlayPermission: check2 failed: ${e.message}")
-                false
-            }
-            
-            // Check 3: Use AppOpsManager to check SYSTEM_ALERT_WINDOW (MOST reliable)
+        // Run entirely on the main (UI) thread so addView test works without deadlock.
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
             try {
-                val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-                val mode = appOps.checkOpNoThrow(
-                    android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
-                    android.os.Process.myUid(),
-                    context.packageName
-                )
-                if (mode == android.app.AppOpsManager.MODE_ALLOWED || mode == android.app.AppOpsManager.MODE_DEFAULT) {
-                    Log.d(TAG, "hasOverlayPermission: check3 (AppOps) PASSED = $mode -> returning true")
-                    promise.resolve(true)
-                    return
-                }
-                Log.d(TAG, "hasOverlayPermission: check3 (AppOps) mode=$mode")
+                val result = checkOverlayPermissionOnMainThread()
+                Log.d(TAG, "hasOverlayPermission: final result=$result")
+                promise.resolve(result)
             } catch (e: Exception) {
-                Log.w(TAG, "hasOverlayPermission: check3 failed: ${e.message}")
+                Log.e(TAG, "hasOverlayPermission: exception: ${e.message}", e)
+                promise.resolve(false)
             }
-
-            // Check 4: Try via PackageManager (check if permission is registered as granted)
-            try {
-                val pm = context.packageManager
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val permInfo = pm.checkPermission(
-                        android.Manifest.permission.SYSTEM_ALERT_WINDOW,
-                        context.packageName
-                    )
-                    if (permInfo == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                        Log.d(TAG, "hasOverlayPermission: check4 (PackageManager) PASSED -> returning true")
-                        promise.resolve(true)
-                        return
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "hasOverlayPermission: check4 failed: ${e.message}")
-            }
-
-            // Check 5: Try to actually add a 1x1 pixel overlay to test if it works.
-            // Must run on the main thread and use the activity window token when available.
-            // Some OEMs (Samsung, Xiaomi, Huawei) return false for canDrawOverlays and AppOps
-            // even when the user has granted overlay permission.
-            try {
-                val activity = context.currentActivity
-                val ctx: Context = activity ?: context
-                val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                val testView = android.view.View(ctx)
-                val lp = WindowManager.LayoutParams(
-                    1, 1,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                    else
-                        @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                    PixelFormat.TRANSLUCENT
-                )
-                // addView/removeView must happen on the main thread
-                val latch = java.util.concurrent.CountDownLatch(1)
-                var check5Result = false
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    try {
-                        wm.addView(testView, lp)
-                        wm.removeView(testView)
-                        check5Result = true
-                    } catch (e: Exception) {
-                        Log.w(TAG, "hasOverlayPermission: check5 addView FAILED: ${e.message}")
-                    } finally {
-                        latch.countDown()
-                    }
-                }
-                latch.await(500, java.util.concurrent.TimeUnit.MILLISECONDS)
-                if (check5Result) {
-                    Log.d(TAG, "hasOverlayPermission: check5 (test overlay) PASSED -> returning true")
-                    promise.resolve(true)
-                    return
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "hasOverlayPermission: check5 (test overlay) FAILED: ${e.message}")
-            }
-
-            Log.d(TAG, "hasOverlayPermission: ALL CHECKS FAILED, returning false")
-            promise.resolve(false)
-        } catch (e: Exception) {
-            Log.e(TAG, "hasOverlayPermission: exception: ${e.message}", e)
-            promise.resolve(false)
         }
+    }
+
+    private fun checkOverlayPermissionOnMainThread(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+        val context = reactApplicationContext
+
+        // Check 1: Standard API
+        if (runCatching { Settings.canDrawOverlays(context) }.getOrDefault(false)) {
+            Log.d(TAG, "hasOverlayPermission: check1 PASSED")
+            return true
+        }
+
+        // Check 2: Via current activity context
+        val activity = context.currentActivity
+        if (activity != null && runCatching { Settings.canDrawOverlays(activity) }.getOrDefault(false)) {
+            Log.d(TAG, "hasOverlayPermission: check2 PASSED (activity)")
+            return true
+        }
+
+        // Check 3: AppOpsManager — MODE_ALLOWED means explicitly granted
+        // Note: on Samsung One UI 6+ (Android 14), granted overlay returns MODE_ALLOWED not MODE_DEFAULT
+        try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+            val mode = appOps.checkOpNoThrow(
+                android.app.AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
+                android.os.Process.myUid(),
+                context.packageName
+            )
+            Log.d(TAG, "hasOverlayPermission: check3 AppOps mode=$mode")
+            if (mode == android.app.AppOpsManager.MODE_ALLOWED) {
+                Log.d(TAG, "hasOverlayPermission: check3 PASSED")
+                return true
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "hasOverlayPermission: check3 failed: ${e.message}")
+        }
+
+        // Check 4: Actually try adding a 1×1 TYPE_APPLICATION_OVERLAY view.
+        // This is the only reliable check on Samsung One UI 6+ where canDrawOverlays()
+        // returns false even after the user has granted the permission in Settings.
+        // Safe to call directly here because we are already on the main thread.
+        try {
+            val ctx: Context = activity ?: context
+            val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val testView = android.view.View(ctx)
+            val lp = WindowManager.LayoutParams(
+                1, 1,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT
+            )
+            wm.addView(testView, lp)
+            wm.removeView(testView)
+            Log.d(TAG, "hasOverlayPermission: check4 addView PASSED")
+            return true
+        } catch (e: Exception) {
+            Log.w(TAG, "hasOverlayPermission: check4 addView FAILED: ${e.message}")
+        }
+
+        return false
     }
 
     @ReactMethod
