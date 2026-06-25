@@ -285,13 +285,16 @@ class CallOverlayService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            width = resources.displayMetrics.widthPixels - dp(24) // full width مع margin
+            width = resources.displayMetrics.widthPixels - dp(24)
             x = dp(12)
             y = dp(48)
+            windowAnimations = 0
+            format = PixelFormat.TRANSLUCENT
         }
         overlayParams = params
 
@@ -879,25 +882,47 @@ class CallOverlayService : Service() {
         scope.launch {
             try {
                 val encoded = java.net.URLEncoder.encode(phoneNumber, "UTF-8")
-                val body = withContext(Dispatchers.IO) {
+                data class FetchResult(val body: String?, val code: Int)
+                val result = withContext(Dispatchers.IO) {
                     val conn = URL("$baseUrl/phones/$encoded").openConnection() as HttpURLConnection
                     conn.requestMethod = "GET"
                     conn.setRequestProperty("Authorization", "Bearer $token")
                     conn.connectTimeout = 8000
                     conn.readTimeout = 8000
                     try {
-                        if (conn.responseCode == 200) conn.inputStream.bufferedReader().readText()
-                        else {
-                            Log.w(TAG, "fetch response code: ${conn.responseCode}")
-                            null
+                        val code = conn.responseCode
+                        Log.d(TAG, "fetchPhoneDetails: response code=$code")
+                        if (code == 200) {
+                            FetchResult(conn.inputStream.bufferedReader().readText(), code)
+                        } else {
+                            val errBody = try { conn.errorStream?.bufferedReader()?.readText() } catch (_: Exception) { null }
+                            Log.w(TAG, "fetch response code=$code errBody=$errBody")
+                            FetchResult(null, code)
                         }
                     } finally { conn.disconnect() }
                 }
                 showAvatarLoading(false)
-                if (body != null) {
-                    applyPhoneDetails(body)
-                } else {
-                    showMissingDatabaseInfo(phoneNumber)
+                when {
+                    result.body != null -> applyPhoneDetails(result.body)
+                    result.code == 404 -> showMissingDatabaseInfo(phoneNumber)
+                    result.code == 401 || result.code == 403 -> {
+                        updateNameLabel("Session expired — reopen app")
+                        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout
+                        card?.findViewWithTag<TextView>("token_debug_label")?.let {
+                            it.text = "Auth error ${result.code} | token: $tokenPreview"
+                            it.visibility = android.view.View.VISIBLE
+                        }
+                        showActionButtons(true)
+                    }
+                    else -> {
+                        updateNameLabel("Lookup failed (${result.code})")
+                        val card = (overlayView as? LinearLayout)?.getChildAt(0) as? LinearLayout
+                        card?.findViewWithTag<TextView>("token_debug_label")?.let {
+                            it.text = "HTTP ${result.code} | $baseUrl"
+                            it.visibility = android.view.View.VISIBLE
+                        }
+                        showActionButtons(true)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "fetch error: ${e.message}")

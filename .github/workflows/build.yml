@@ -78,74 +78,76 @@ jobs:
           files: ./meendah-${{ steps.app_version.outputs.tag }}.apk
           prerelease: ${{ github.ref_name != 'master' }}
 
-  build-ios:
-    runs-on: macos-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Read app version
-        id: app_version
-        run: |
-          VERSION=$(node -p "require('./app.json').expo.version")
-          CHANNEL=${{ github.ref_name == 'master' && '"stable"' || '"preview"' }}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}-${CHANNEL}-${{ github.run_number }}" >> $GITHUB_OUTPUT
-
-      - name: Setup iOS Credentials
-        env:
-          EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
-          EXPO_APPLE_ID_PASSWORD: ${{ secrets.EXPO_APPLE_ID_PASSWORD }}
-          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
-        run: |
-          echo "Configuring iOS credentials for non-interactive build..."
-          eas credentials:configure-build --platform ios --profile preview --non-interactive 2>&1 || echo "Credentials setup may require interactive mode. Build will attempt anyway."
-
-      - name: Build IPA via EAS
-        env:
-          EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
-          EXPO_APPLE_ID_PASSWORD: ${{ secrets.EXPO_APPLE_ID_PASSWORD }}
-          EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
-        run: eas build --platform ios --profile preview --non-interactive
-
-      - name: Download IPA from EAS
-        run: |
-          IPA_URL=$(eas build:list --platform ios --limit 1 --json --non-interactive | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))[0].artifacts.buildUrl")
-          curl -L "$IPA_URL" -o "./meendah-${{ steps.app_version.outputs.tag }}.ipa"
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: ./meendah-${{ steps.app_version.outputs.tag }}.ipa
-
-      - name: Upload IPA to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.app_version.outputs.tag }}
-          name: "MeenDah ${{ steps.app_version.outputs.version }} (${{ steps.app_version.outputs.channel }}) #${{ github.run_number }}"
-          body: |
-            **Channel:** ${{ steps.app_version.outputs.channel }}
-            **Commit:** ${{ github.sha }}
-            **Branch:** ${{ github.ref_name }}
-          files: ./meendah-${{ steps.app_version.outputs.tag }}.ipa
-          prerelease: ${{ github.ref_name != 'master' }}
+  # iOS build disabled - requires Apple Developer Program ($99/year)
+  # To enable: subscribe at https://developer.apple.com/programs/
+  # Then run: eas build --platform ios --profile preview (once, on Mac)
+  # build-ios:
+  #   runs-on: macos-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         cache: 'npm'
+  #         cache-dependency-path: package-lock.json
+  #
+  #     - name: Setup EAS
+  #       uses: expo/expo-github-action@v8
+  #       with:
+  #         eas-version: latest
+  #         token: ${{ secrets.EXPO_TOKEN }}
+  #
+  #     - name: Install dependencies
+  #       run: npm install
+  #
+  #     - name: Read app version
+  #       id: app_version
+  #       run: |
+  #         VERSION=$(node -p "require('./app.json').expo.version")
+  #         CHANNEL=${{ github.ref_name == 'master' && '"stable"' || '"preview"' }}
+  #         echo "version=$VERSION" >> $GITHUB_OUTPUT
+  #         echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
+  #         echo "tag=v${VERSION}-${CHANNEL}-${{ github.run_number }}" >> $GITHUB_OUTPUT
+  #
+  #     - name: Setup iOS Credentials
+  #       env:
+  #         EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+  #         EXPO_APPLE_ID_PASSWORD: ${{ secrets.EXPO_APPLE_ID_PASSWORD }}
+  #         EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+  #       run: |
+  #         eas credentials:configure-build --platform ios --profile preview --non-interactive
+  #
+  #     - name: Build IPA via EAS
+  #       env:
+  #         EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+  #         EXPO_APPLE_ID_PASSWORD: ${{ secrets.EXPO_APPLE_ID_PASSWORD }}
+  #         EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+  #       run: eas build --platform ios --profile preview --non-interactive
+  #
+  #     - name: Download IPA from EAS
+  #       run: |
+  #         IPA_URL=$(eas build:list --platform ios --limit 1 --json --non-interactive | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))[0].artifacts.buildUrl")
+  #         curl -L "$IPA_URL" -o "./meendah-${{ steps.app_version.outputs.tag }}.ipa"
+  #
+  #     - name: Upload IPA artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ios-build
+  #         path: ./meendah-${{ steps.app_version.outputs.tag }}.ipa
+  #
+  #     - name: Upload IPA to GitHub Release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         tag_name: ${{ steps.app_version.outputs.tag }}
+  #         name: "MeenDah ${{ steps.app_version.outputs.version }} (${{ steps.app_version.outputs.channel }}) #${{ github.run_number }}"
+  #         body: |
+  #           **Channel:** ${{ steps.app_version.outputs.channel }}
+  #           **Commit:** ${{ github.sha }}
+  #           **Branch:** ${{ github.ref_name }}
+  #         files: ./meendah-${{ steps.app_version.outputs.tag }}.ipa
+  #         prerelease: ${{ github.ref_name != 'master' }}

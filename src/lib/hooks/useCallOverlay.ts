@@ -302,6 +302,13 @@ async function ensurePermissions(s: Strings) {
         buttonPositive: s.allow, buttonNegative: s.notNow }
     );
 
+    // 3.5. CALL_PHONE — needed for direct call from overlay callback button
+    await requestIfNeeded(
+      PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+      { title: 'Allow calling', message: 'Allow Meendah to make calls directly from the call overlay.',
+        buttonPositive: s.allow, buttonNegative: s.notNow }
+    );
+
     // 4. SYSTEM_ALERT_WINDOW (overlay) — must be granted via Settings on Android 6+
     const hasOverlay = await callDetection.hasOverlayPermission();
     debugLogger.log('CallOverlay', 'Has overlay permission', hasOverlay);
